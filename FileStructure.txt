@@ -1,0 +1,7 @@
+telegram-buy-bot/
+├── node_modules/                # Installed dependencies
+├── src/
+│   └── bot.js                   # Main bot script (all the code above)
+├── .env                         # Environment variables
+├── .gitignore                   # Git ignore file
+├── package.json                 # Project dependencies and scripts

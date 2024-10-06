@@ -1,0 +1,23 @@
+{
+  "name": "coon-buy-bot",
+  "version": "1.0.0",
+  "description": "A single-token buy bot for CoonBot",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js"
+  },
+  "keywords": [
+    "coon",
+    "buy",
+    "bot",
+    "telegram"
+  ],
+  "author": "CoonBot",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^5.7.2",
+    "node-fetch": "^2.7.0",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
