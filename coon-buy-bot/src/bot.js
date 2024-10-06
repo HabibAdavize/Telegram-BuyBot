@@ -82,14 +82,11 @@ bot.onText(/\/buy (\d+)/, async (msg, match) => {
       ? customEmojis.join(' ').repeat(emojiCount) 
       : '🎉'.repeat(emojiCount); // Use default if custom emojis aren't set
 
-    let responseMessage = `New buy detected: $${amount} ${emojis}`;
+    let responseMessage = `*New buy detected:* $${amount} ${emojis}\n\n`;
+    responseMessage += `_Current price:_ $${tokenPrice}\n`;
+    responseMessage += `_Market Cap:_ $${marketCap}`;
 
-    // Add media (GIF/Image/Video) to the message if mediaUrl is set
-    if (mediaUrl) {
-      await bot.sendPhoto(chatId, mediaUrl, { caption: responseMessage });
-    } else {
-      await bot.sendMessage(chatId, responseMessage);
-    }
+    await bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
 
     // Fetch token price and market cap if tracking is enabled
     if (priceTrackingEnabled) {
