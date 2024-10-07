@@ -1,19 +1,33 @@
+const DEBUG = true;
+
+function debugLog(...args) {
+  if (DEBUG) {
+    console.log(new Date().toISOString(), ...args);
+  }
+}
+
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const ethers = require('ethers');
-const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const { RateLimiter } = require('limiter');
+const { Connection, PublicKey } = require('@solana/web3.js');
+const { TOKEN_PROGRAM_ID } = require('@solana/spl-token');
 
-// Initialize Telegram bot
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+// Initialize Telegram bot with polling options
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
+  polling: true,
+  request: {
+    retries: 3,
+    timeout: 30000,
+  },
+});
 
-// Setup Binance Smart Chain provider
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+// Initialize Solana connection
+const connection = new Connection(process.env.SOLANA_RPC_URL);
+const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
 
 // Rate limiter: 5 requests per second
-const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "second" });
+const limiter = new RateLimiter({ tokensPerInterval: 5, interval: 'second' });
 
 // Global variables (will be loaded from storage)
 let settings = {
@@ -21,28 +35,46 @@ let settings = {
   buyStep: 1,
   minBuyAmount: 0,
   tokenSupply: 100000000000,
-  tokenPrice: 0,
-  marketCap: 0,
-  priceTrackingEnabled: true,
-  mediaUrl: '',
-  customEmojis: ['🎉']
+  buyImageFileId: '',
+  customEmojis: ['🎉'],
+  dexScreenerUrl: '',
+  holders: new Set(),
+  tempImageFileId: null, // Temp image variable added
 };
 
 // File path for persistent storage
 const SETTINGS_FILE = 'bot_settings.json';
 
+// Error handling function
+async function handleError(chatId, error, customMessage) {
+  console.error('Error:', error);
+  const errorMessage = customMessage + ' An unexpected error occurred. Please try again later.';
+  try {
+    await bot.sendMessage(chatId, errorMessage, mainMenuKeyboard);
+  } catch (sendError) {
+    console.error('Error sending error message:', sendError);
+  }
+}
+
 // Load settings from file
 async function loadSettings() {
   try {
     const data = await fs.readFile(SETTINGS_FILE, 'utf8');
-    settings = JSON.parse(data);
+    const loadedSettings = JSON.parse(data);
+    settings = {
+      ...loadedSettings,
+      holders: new Set(loadedSettings.holders || []),
+      tempImageFileId: null,
+    };
     console.log('Settings loaded successfully');
   } catch (error) {
     if (error.code === 'ENOENT') {
       console.log('Settings file not found, using default settings');
-      await saveSettings(); // Create the file with default settings
+      settings.holders = new Set();
+      await saveSettings(); // Ensure you save default settings if file not found
     } else {
       console.error('Error loading settings:', error);
+      throw new Error('Failed to load settings');
     }
   }
 }
@@ -50,165 +82,130 @@ async function loadSettings() {
 // Save settings to file
 async function saveSettings() {
   try {
-    await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings));
     console.log('Settings saved successfully');
   } catch (error) {
     console.error('Error saving settings:', error);
+    throw new Error('Failed to save settings');
   }
 }
 
-// Command handlers
-bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome to the Buy Bot! Use /settracking to enable tracking.');
+// Main menu keyboard
+const mainMenuKeyboard = {
+  reply_markup: {
+    inline_keyboard: [
+      [
+        { text: '🟢 Activate', callback_data: 'activate' },
+        { text: '🔴 Deactivate', callback_data: 'deactivate' },
+      ],
+      [{ text: '🖼 Set Buy Image', callback_data: 'set_image' }],
+      [{ text: '🟢 Buy Emoji', callback_data: 'set_buy_emoji' }, { text: '🔀 Shuffle', callback_data: 'toggle_shuffle' }],
+      [{ text: '💲 Buy Step', callback_data: 'set_buy_step' }, { text: '🏔 Min. Buy', callback_data: 'set_min_buy' }],
+      [{ text: '🔄 Supply', callback_data: 'set_supply' }],
+      [{ text: '💰 Token Price', callback_data: 'set_token_price' }, { text: '📊 Market Cap', callback_data: 'set_market_cap' }],
+      [{ text: '🎨 Emoji Layout Style', callback_data: 'set_layout_style' }],
+      [{ text: '📈 Set Chart URL', callback_data: 'set_chart_url' }],
+    ],
+  },
+};
+
+// Command: Start the bot and show main menu
+bot.onText(/\/start/, async (msg) => {
+  try {
+    await bot.sendMessage(msg.chat.id, 'Welcome to the Buy Bot! Here are your settings:', mainMenuKeyboard);
+  } catch (error) {
+    await handleError(msg.chat.id, error);
+  }
 });
 
-// Enable/Disable Tracking
-bot.onText(/\/settracking/, async (msg) => {
-  const chatId = msg.chat.id;
-  settings.trackingEnabled = !settings.trackingEnabled;
-  const status = settings.trackingEnabled ? "enabled" : "disabled";
-  await saveSettings();
-  bot.sendMessage(chatId, `Tracking is now ${status}.`);
-});
-
-// Set Buy Step
-bot.onText(/\/setbuystep (\d+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  settings.buyStep = parseInt(match[1], 10);
-  await saveSettings();
-  bot.sendMessage(chatId, `Buy step set to $${settings.buyStep}.`);
-});
-
-// Set Minimum Buy Amount
-bot.onText(/\/setminbuy (\d+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  settings.minBuyAmount = parseInt(match[1], 10);
-  await saveSettings();
-  bot.sendMessage(chatId, `Minimum buy amount set to $${settings.minBuyAmount}.`);
-});
-
-// Update Token Supply
-bot.onText(/\/setsupply (\d+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  settings.tokenSupply = parseInt(match[1], 10);
-  await saveSettings();
-  bot.sendMessage(chatId, `Token supply set to ${settings.tokenSupply}.`);
-});
-
-// Enable/Disable Price and Market Cap Tracking
-bot.onText(/\/toggleprice/, async (msg) => {
-  const chatId = msg.chat.id;
-  settings.priceTrackingEnabled = !settings.priceTrackingEnabled;
-  const status = settings.priceTrackingEnabled ? "enabled" : "disabled";
-  await saveSettings();
-  bot.sendMessage(chatId, `Price tracking is now ${status}.`);
-});
-
-// Set custom emojis for each buy
-bot.onText(/\/setemojis (.+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  settings.customEmojis = match[1].split(' ');
-  await saveSettings();
-  bot.sendMessage(chatId, `Custom emojis set to: ${settings.customEmojis.join(' ')}`);
-});
-
-// Handle Buy Notifications
-bot.onText(/\/buy (\d+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  const amount = parseFloat(match[1]);
+// Handle button clicks
+bot.on('callback_query', async (callbackQuery) => {
+  const action = callbackQuery.data;
+  const msg = callbackQuery.message;
+  debugLog('Received callback query:', action);
 
   try {
-    await limiter.removeTokens(1);
+    if (action.startsWith('tx:')) {
+      const txId = action.split(':')[1];
+      const txHash = txnCache.get(txId);
+      if (txHash) {
+        const solscanUrl = `https://solscan.io/tx/${txHash}`;
+        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Opening transaction details...' });
+        await bot.sendMessage(msg.chat.id, `Transaction details: ${solscanUrl}`);
+        txnCache.delete(txId);
+      } else {
+        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Transaction details not available' });
+      }
+    } else if (action === 'chart') {
+      if (settings.dexScreenerUrl) {
+        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Opening chart...' });
+        await bot.sendMessage(msg.chat.id, `Chart: ${settings.dexScreenerUrl}`);
+      } else {
+        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Chart URL not set' });
+      }
+    }
+  } catch (error) {
+    debugLog('Error in callback query handler:', error);
+    await handleError(msg.chat.id, error);
+  }
+});
 
-    if (settings.trackingEnabled && amount >= settings.minBuyAmount) {
-      const emojiCount = Math.floor(amount / settings.buyStep);
-      const emojis = settings.customEmojis.length > 0 
-        ? settings.customEmojis.join(' ').repeat(emojiCount) 
-        : '🎉'.repeat(emojiCount);
+// Handle image uploads
+bot.on('photo', async (msg) => {
+  try {
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    settings.tempImageFileId = fileId;
+    await saveSettings();
+    await bot.sendMessage(msg.chat.id, 'Image received. Use /setbuyimage to confirm and set this as the new buy image.', mainMenuKeyboard);
+  } catch (error) {
+    await handleError(msg.chat.id, error, 'Failed to process the uploaded image. Please try again.');
+  }
+});
 
-      let responseMessage = `*New buy detected:* $${amount} ${emojis}\n\n`;
-      responseMessage += `_Current price:_ $${settings.tokenPrice}\n`;
-      responseMessage += `_Market Cap:_ $${settings.marketCap}`;
-
-      await bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
-
-      if (settings.priceTrackingEnabled) {
-        try {
-          const { price, marketCap } = await fetchTokenPrice();
-          await bot.sendMessage(chatId, `Current token price: $${price}\nMarket Cap: $${marketCap}`);
-        } catch (error) {
-          console.error('Error fetching token price:', error);
-          await bot.sendMessage(chatId, 'Unable to fetch token price and market cap. Please try again later.');
-        }
+// Command to set the buy image
+bot.onText(/\/setbuyimage/, async (msg) => {
+  try {
+    if (settings.tempImageFileId) {
+      try {
+        await bot.getFile(settings.tempImageFileId);
+        settings.buyImageFileId = settings.tempImageFileId;
+        settings.tempImageFileId = null;
+        await saveSettings();
+        await bot.sendMessage(msg.chat.id, 'Buy image updated successfully', mainMenuKeyboard);
+      } catch (fileError) {
+        console.error('Error verifying file:', fileError);
+        await bot.sendMessage(msg.chat.id, 'The uploaded image is no longer available. Please upload a new image.', mainMenuKeyboard);
       }
     } else {
-      await bot.sendMessage(chatId, `Buy of $${amount} is below the minimum threshold or tracking is disabled.`);
+      await bot.sendMessage(msg.chat.id, 'No image uploaded. Please upload an image first.', mainMenuKeyboard);
     }
   } catch (error) {
-    if (error.name === 'MaxTokensExceededError') {
-      await bot.sendMessage(chatId, 'Too many requests. Please try again later.');
+    await handleError(msg.chat.id, error, 'Failed to set the buy image. Please try again.');
+  }
+});
+
+// Command to set the DexScreener URL
+bot.onText(/\/setcharturl (.+)/, async (msg, match) => {
+  try {
+    const url = match[1].trim();
+    if (isValidUrl(url)) {
+      settings.dexScreenerUrl = url;
+      await saveSettings();
+      await bot.sendMessage(msg.chat.id, `Chart URL set successfully: ${url}`, mainMenuKeyboard);
     } else {
-      console.error('Error processing buy:', error);
-      await bot.sendMessage(chatId, 'An error occurred while processing the buy. Please try again later.');
+      await bot.sendMessage(msg.chat.id, 'Invalid URL format. Please try again.', mainMenuKeyboard);
     }
-  }
-});
-
-// Add media (GIF/Image/Video) with each buy notification
-bot.onText(/\/setmedia (.+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  settings.mediaUrl = match[1];
-  await saveSettings();
-  bot.sendMessage(chatId, `Media set to: ${settings.mediaUrl}`);
-});
-
-// Helper function to fetch token price and market cap
-async function fetchTokenPrice() {
-  try {
-    await limiter.removeTokens(1);
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${process.env.COINGECKO_TOKEN_ID}&vs_currencies=usd&include_market_cap=true`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    settings.tokenPrice = data[process.env.COINGECKO_TOKEN_ID].usd;
-    settings.marketCap = data[process.env.COINGECKO_TOKEN_ID].usd_market_cap;
-    await saveSettings();
-    return { price: settings.tokenPrice, marketCap: settings.marketCap };
   } catch (error) {
-    console.error('Error fetching token price:', error);
-    return { price: 0, marketCap: 0 };
+    await handleError(msg.chat.id, error, 'Failed to set chart URL. Please try again.');
   }
-}
-
-// Error handler for bot polling errors
-bot.on('polling_error', (error) => {
-  console.error('Bot polling error:', error);
 });
 
-// Gracefully stop the bot on termination
-process.once('SIGINT', async () => {
-  console.log('SIGINT signal received. Stopping bot...');
-  await saveSettings();
-  bot.stop('SIGINT');
-  process.exit(0);
-});
-process.once('SIGTERM', async () => {
-  console.log('SIGTERM signal received. Stopping bot...');
-  await saveSettings();
-  bot.stop('SIGTERM');
-  process.exit(0);
-});
-
-// Initialize the bot
-async function init() {
-  try {
-    await loadSettings();
-    console.log('Bot is running...');
-  } catch (error) {
-    console.error('Error initializing bot:', error);
-  }
-}
-
-init();
+// Start the bot
+loadSettings()
+  .then(() => {
+    debugLog('Bot is running...');
+  })
+  .catch((error) => {
+    console.error('Failed to start bot:', error);
+    process.exit(1);
+  });

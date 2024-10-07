@@ -1,0 +1,32 @@
+{
+  "trackingEnabled": true,
+  "buyStep": 1,
+  "minBuyAmount": 1,
+  "tokenSupply": 1,
+  "mediaUrl": "https://example.com/image.jpg",
+  "customEmojis": [
+    "🚀",
+    "💎"
+  ],
+  "buyImageFileId": "AgACAgQAAxkBAAM1ZwO9C_i4cTUusJElIN5BNXZLZwEAAnPIMRspgiFQUFx8BAffb78BAAMCAAN4AAM2BA",
+  "holders": [
+    "DNKJP9...RK2",
+    "DNICWB...DC3",
+    "DNFDK6...T8J",
+    "DNNU74...1RO",
+    "DNFXD9...SCN",
+    "DNO8ZQ...R61",
+    "DNT0B6...93B",
+    "DN9T7J...EP2",
+    "DNIF70...PXR",
+    "DNO661...NCF",
+    "DNDIW7...5OV",
+    "DNNTFJ...JJA",
+    "DNC2BW...CX1",
+    "DNKBX4...TVH",
+    "DN9IN8...O4W"
+  ],
+  "tempImageFileId": null,
+  "shuffleEmojis": true,
+  "emojiLayoutStyle": "horizontal"
+}
