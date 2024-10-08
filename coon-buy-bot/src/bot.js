@@ -13,7 +13,9 @@ const ngrokUrl = process.env.NGROK_URL; // ngrok URL in .env
 bot.setWebHook(`${ngrokUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection(process.env.SOLANA_RPC_URL);
+const connection = new Connection(process.env.SOLANA_RPC_URL);// Initialize Solana connection
+console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
+
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
 
 // Global variables (will be loaded from storage)
