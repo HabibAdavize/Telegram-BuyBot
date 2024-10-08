@@ -6,9 +6,13 @@
   "mediaUrl": "https://example.com/image.jpg",
   "customEmojis": [
     "🚀",
-    "💎"
+    "💎",
+    "💰",
+    "💧😭💰",
+    "/buy 10",
+    "💰"
   ],
-  "buyImageFileId": "AgACAgQAAxkBAAM1ZwO9C_i4cTUusJElIN5BNXZLZwEAAnPIMRspgiFQUFx8BAffb78BAAMCAAN4AAM2BA",
+  "buyImageFileId": "AgACAgQAAyEFAASCdVTkAAIHg2cFK1JGbw6F0rYczd3t7qTgxyzJAAK4yTEbo1wpUIhUCnmIX6EAAQEAAwIAA3gAAzYE",
   "holders": [
     "DNKJP9...RK2",
     "DNICWB...DC3",
@@ -24,9 +28,27 @@
     "DNNTFJ...JJA",
     "DNC2BW...CX1",
     "DNKBX4...TVH",
-    "DN9IN8...O4W"
+    "DN9IN8...O4W",
+    "DNF0TX...DO4",
+    "DN77O2...6O7",
+    "DNVT5Q...Q87",
+    "DNJEKZ...VQL",
+    "DNPMBR...U3K",
+    "DNFS6Q...GHL",
+    "DNRFFY...515",
+    "DNGF7E...01I"
   ],
   "tempImageFileId": null,
   "shuffleEmojis": true,
-  "emojiLayoutStyle": "horizontal"
+  "emojiLayoutStyle": "horizontal",
+  "groupChatIds": [
+    -1002188727524,
+    6357613819,
+    -1002482765991
+  ],
+  "users": [
+    -1002188727524,
+    6357613819,
+    -1002482765991
+  ]
 }
