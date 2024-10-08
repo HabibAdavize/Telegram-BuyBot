@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "builds": [{
+        "src": "coon-buy-bot/src/bot.js",
+        "use": "@vercel/node"
+    }],
+    "routes": [{
+        "src": "/(.*)",
+        "dest": "coon-buy-bot/src/bot.js"
+    }]
+}
