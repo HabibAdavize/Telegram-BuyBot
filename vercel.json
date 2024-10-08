@@ -5,7 +5,7 @@
         "use": "@vercel/node"
     }],
     "routes": [{
-        "src": "/bot(.*)",
+        "src": "/(.*)",
         "dest": "coon-buy-bot/src/bot.js"
     }]
 }
