@@ -5,15 +5,15 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
 
-// Initialize Telegram bot with webhook (using ngrok)
+// Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
-const ngrokUrl = process.env.NGROK_URL; // ngrok URL in .env
 
-// Set webhook using ngrok URL
-bot.setWebHook(`${ngrokUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
+// Set webhook using Vercel URL
+const vercelUrl = 'https://telegram-buy-bot.vercel.app'; // Your Vercel deployment URL
+bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection(process.env.SOLANA_RPC_URL);// Initialize Solana connection
+const connection = new Connection(process.env.SOLANA_RPC_URL); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
@@ -370,7 +370,7 @@ async function init() {
 // Start the bot
 init();
 
-// Handle webhook requests from ngrok
+// Handle webhook requests from Vercel
 const app = express();
 app.use(express.json());
 
