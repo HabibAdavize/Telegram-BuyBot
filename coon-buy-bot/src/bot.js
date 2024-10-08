@@ -9,7 +9,7 @@ const axios = require('axios'); // Import axios for making API calls
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
 // Set webhook using Vercel URL
-const vercelUrl = 'https://telegram-buybot-6hny.onrender.com'; // Your Vercel deployment URL
+const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
