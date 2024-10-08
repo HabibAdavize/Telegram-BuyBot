@@ -180,7 +180,7 @@ async function sendBuyNotification(chatId, amount) {
     caption += `📊 Market Cap: $${formatNumber(marketCap)}\n`;
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
     caption += `📈 24h Volume: $${formatNumber(volume24h)}\n`;
-    caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](${settings.dexScreenerUrl})\n`;
+    caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
     caption += `#️⃣ Hash [here](https://solscan.io/tx/${generateRandomTxnHash()}) 🏅 Trending [here](http://t.me/CryptoTrendingOfficial)\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
 
