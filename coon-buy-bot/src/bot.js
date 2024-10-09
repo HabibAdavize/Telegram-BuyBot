@@ -136,6 +136,24 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
 
     console.log('Listening for real-time token transactions...');
 }
+const getTransactions = async(address, numTx=10) => {
+  // const pubKey = new PublicKey(address);
+    let transactionList = await connection.getSignaturesForAddress(address, {limit:numTx});
+    
+    //Add this code
+    let signatureList = transactionList.map(transaction=>transaction.signature);
+    let transactionDetails = await connection.getParsedTransactions(signatureList, {maxSupportedTransactionVersion:0});
+    //--END of new code 
+
+    transactionList.forEach((transaction, i) => {
+        const date = new Date(transaction.blockTime*1000);
+        console.log(`Transaction No: ${i+1}`);
+        console.log(`Signature: ${transaction.signature}`);
+        console.log(`Time: ${date}`);
+        console.log(`Status: ${transaction.confirmationStatus}`);
+        console.log(("-").repeat(20));
+    })
+}
 // Real-time buy tracking for the token
 async function trackRealTimeBuys() {
     console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
@@ -404,6 +422,7 @@ async function init() {
     await trackRealTimeBuys()
     let n = await connection.getBalance(tokenAddress)
     console.log("balance", n)
+    await getTransactions(tokenAddress)
 }
 
 // Start the bot
