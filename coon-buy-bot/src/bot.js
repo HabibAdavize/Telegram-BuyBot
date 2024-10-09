@@ -110,6 +110,7 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
     // Get initial token balance
     const tokenAccountInfo = await connection.getParsedAccountInfo(tokenAccountAddress);
     if (tokenAccountInfo.value) {
+        console.log(tokenAccountInfo.value.data)
         previousTokenBalance = tokenAccountInfo.value.data.parsed.info.tokenAmount.uiAmount;
     } else {
         console.error('Unable to fetch token account info.');
