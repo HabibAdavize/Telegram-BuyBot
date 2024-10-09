@@ -140,6 +140,7 @@ async function trackRealTimeBuys() {
     console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
 
     connection.onLogs(tokenAddress, async(logs) => {
+        console.log(logs)
         for (const log of logs.logs) {
             if (log.includes('transfer')) {
                 const amount = parseTransferAmount(log); // Custom function to parse amount
@@ -398,7 +399,8 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-    await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+   // await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+    await trackRealTimeBuys()
 }
 
 // Start the bot
