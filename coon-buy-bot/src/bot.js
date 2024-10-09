@@ -111,6 +111,7 @@ async function trackRealTimeBuys() {
     console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
 
     connection.onLogs(tokenAddress, async(logs) => {
+        console.log(logs)
         for (const log of logs.logs) {
             if (log.includes('transfer')) {
                 const amount = parseTransferAmount(log); // Custom function to parse amount
@@ -128,6 +129,9 @@ function parseTransferAmount(log) {
     const match = log.match(/Transfer ([0-9.]+) tokens/);
     return match ? parseFloat(match[1]) : 0;
 }
+
+
+
 
 // Notify all groups about the buy
 async function notifyGroups(amount) {
