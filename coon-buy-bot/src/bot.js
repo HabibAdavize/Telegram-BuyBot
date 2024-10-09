@@ -199,7 +199,7 @@ let startPolling = () => {
                 let required_amount = txs[ts_id].filter(data => data.mint === process.env.TOKEN_ADDRESS ? false : true)
 
                 let amount = required_amount[0].tokenAmount.uiAmount
-                notifyGroups(amount)
+                notifyGroups(amount, txs[ts_id][0].signature[0])
                 ts_id++
             }
 
@@ -217,9 +217,9 @@ let startPolling = () => {
 
 
 // Notify all groups about the buy
-async function notifyGroups(amount) {
+async function notifyGroups(amount, signature) {
     for (const chatId of settings.groupChatIds) {
-        await sendBuyNotification(chatId, amount);
+        await sendBuyNotification(chatId, amount, signature);
     }
 }
 
@@ -236,7 +236,7 @@ bot.onText(/\/start/, (msg) => {
 });
 
 // Send buy notification
-async function sendBuyNotification(chatId, amount) {
+async function sendBuyNotification(chatId, amount, signature) {
     const tokenDetails = await fetchTokenDetails(); // Fetch token details from DexScreener
 
     if (!tokenDetails) {
@@ -268,7 +268,7 @@ async function sendBuyNotification(chatId, amount) {
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
     caption += `📈 24h Volume: $${formatNumber(volume24h)}\n`;
     caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
-    caption += `#️⃣ Hash [here](https://solscan.io/tx/${generateRandomTxnHash()}) 🏅 Trending [here](http://t.me/CryptoTrendingOfficial)\n`;
+    caption += `#️⃣ Hash [here](https://solscan.io/tx/${signature})\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
 
     // Send the notification message
