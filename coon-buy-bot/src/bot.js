@@ -136,55 +136,86 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
 
     console.log('Listening for real-time token transactions...');
 }
-const getTransactions = async(address, numTx = 10) => {
-        // const pubKey = new PublicKey(address);
-        let transactionList = await connection.getSignaturesForAddress(address, { limit: numTx });
+const getTransactions = async(address, numTx = 20) => {
+    // const pubKey = new PublicKey(address);
+    let transactionList = await connection.getSignaturesForAddress(address, { limit: numTx });
 
-        //Add this code
-        let signatureList = transactionList.map(transaction => transaction.signature);
-        let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
+    //Add this code
+    let signatureList = transactionList.map(transaction => transaction.signature);
+    let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
+    let txs_list = []
         //--END of new code 
 
-        transactionList.forEach((transaction, i) => {
-            console.log(JSON.stringify(transactionDetails[i]))
-            const date = new Date(transaction.blockTime * 1000);
-            console.log(`Transaction No: ${i+1}`);
-            console.log(`Signature: ${transaction.signature}`);
-            console.log(`Time: ${date}`);
-            console.log(`Status: ${transaction.confirmationStatus}`);
-            console.log(("-").repeat(20));
-        })
-    }
-    // Real-time buy tracking for the token
-async function trackRealTimeBuys() {
-    console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
+    transactionList.forEach((transaction, i) => {
+        let instruction = transactionDetails[i].meta.innerInstructions[0]
+            //console.log(instruction ? instruction.instructions.filter(data => data.parsed).map(data => ({ mint: data.parsed.info.mint, amount: data.parsed.info.tokenAmount })) : transactionDetails[i].meta.innerInstructions)
+            // console.log(instruction ? instruction.instructions.filter(d => !d.parsed ? d.parsed.info.tokenAmount : false) : '');
+        let txs = instruction ? instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
+            mint: d.parsed.info.mint,
+            tokenAmount: d.parsed.info.tokenAmount,
+            signature: transactionDetails[i].transaction.signatures
 
-    connection.onLogs(tokenAddress, async(logs) => {
-        console.log(logs)
-        for (const log of logs.logs) {
-            if (log.includes('transfer')) {
-                const amount = parseTransferAmount(log); // Custom function to parse amount
-                if (amount >= settings.minBuyAmount) {
-                    console.log(`New buy detected: ${amount} tokens`);
-                    await notifyGroups(amount);
-                }
-            }
+        })) : null
+
+        if (txs === null || txs.length === 0) {
+            return
         }
-    });
+
+        txs_list.push(txs)
+            // const date = new Date(transaction.blockTime * 1000);
+            // // console.log(`Transaction No: ${i+1}`);
+            // // console.log(`Signature: ${transaction.signature}`);
+            // // console.log(`Time: ${date}`);
+            // // console.log(`Status: ${transaction.confirmationStatus}`);
+            // console.log(("-").repeat(20));
+    })
+
+    // console.log(txs_list)
+
+    return txs_list
 }
 
-// Parse transfer amount from logs
-function parseTransferAmount(log) {
-    const match = log.match(/Transfer ([0-9.]+) tokens/);
-    return match ? parseFloat(match[1]) : 0;
+
+let InitSignature = null
+
+let startPolling = () => {
+    setInterval(async() => {
+
+            let txs = await getTransactions(tokenAddress) || []
+                // console.log(InitSignature)
+
+            // InitSignature === null && txs.shift()
+
+            if (InitSignature === null) {
+
+                InitSignature = txs.shift()[0].signature[0]
+
+                return
+            }
+
+            let ts_id = 0
+            while (txs[ts_id][0].signature[0] !== InitSignature) {
+
+                let required_amount = txs[ts_id].filter(data => data.mint === process.env.TOKEN_ADDRESS ? false : true)
+
+                let amount = required_amount[0].tokenAmount.uiAmount
+                notifyGroups(amount)
+                ts_id++
+            }
+
+            //if the signature of the topmost tx is differnt 
+
+            if (txs[0][0].signature[0] !== InitSignature) {
+                InitSignature = txs[0][0].signature[0]
+            }
+
+        },
+        10000)
 }
 
-function parseTokenAmount(accountData) {
-    // Implement your custom parsing logic here based on the token implementation
-    // For example, if the amount is stored as a 64-bit integer:
-    const amountBuffer = Buffer.from(accountData.slice(0, 8));
-    return amountBuffer.readBigInt64LE();
-}
+
+
+
 // Notify all groups about the buy
 async function notifyGroups(amount) {
     for (const chatId of settings.groupChatIds) {
@@ -358,6 +389,7 @@ bot.onText(/\/untrack/, async(msg) => {
     bot.sendMessage(msg.chat.id, 'Tracking deactivated.');
 });
 
+
 // Command to add group chat ID
 bot.onText(/\/addgroup/, async(msg) => {
     const chatId = msg.chat.id;
@@ -420,11 +452,11 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-    await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
-    await trackRealTimeBuys()
-    let n = await connection.getBalance(tokenAddress)
-    console.log("balance", n)
-    await getTransactions(tokenAddress)
+    // await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+    // await trackRealTimeBuys()
+    // let n = await connection.getBalance(tokenAddress)
+    // console.log("balance", n)
+    startPolling()
 }
 
 // Start the bot
