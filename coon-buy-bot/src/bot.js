@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const { Connection, PublicKey } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
-
+const WebSocket = require('ws');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -13,7 +13,7 @@ const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection(process.env.SOLANA_RPC_URL); // Initialize Solana connection
+const connection = new Connection(process.env.SOLANA_RPC_URL, "confirmed"); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
@@ -105,7 +105,23 @@ async function fetchTokenDetails() {
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+ws.onmessage = (message) => {
+  const parsedMessage = JSON.parse(message.data);
 
+  if (parsedMessage.method === 'accountUpdate') {
+    const accountInfo = parsedMessage.params[0].account;
+    const tokenAccount = new PublicKey(accountInfo.owner);
+
+    if (tokenAccount.equals(tokenAddress)) {
+      // Token account balance has changed
+      const newBalance = parseTokenAmount(accountInfo.data);
+      console.log('New balance:', newBalance);
+
+      // Call notifyUsers(amount) with the extracted amount
+      notifyUsers(newBalance);
+    }
+  }
+};
 // Real-time buy tracking for the token
 async function trackRealTimeBuys() {
     console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
@@ -124,11 +140,16 @@ async function trackRealTimeBuys() {
 }
 
 // Parse transfer amount from logs
-function parseTransferAmount(log) {
-    const match = log.match(/Transfer ([0-9.]+) tokens/);
-    return match ? parseFloat(match[1]) : 0;
+//function parseTransferAmount(log) {
+//    const match = log.match(/Transfer ([0-9.]+) tokens/);
+ //   return match ? parseFloat(match[1]) : 0;
+//}
+function parseTokenAmount(accountData) {
+  // Implement your custom parsing logic here based on the token implementation
+  // For example, if the amount is stored as a 64-bit integer:
+  const amountBuffer = Buffer.from(accountData.slice(0, 8));
+  return amountBuffer.readBigInt64LE();
 }
-
 // Notify all groups about the buy
 async function notifyGroups(amount) {
     for (const chatId of settings.groupChatIds) {
