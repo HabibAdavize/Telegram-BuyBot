@@ -400,8 +400,10 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-    await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+    //await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
     await trackRealTimeBuys()
+    let n = await connection.getBalance(tokenAddress)
+    console.log("balance", n)
 }
 
 // Start the bot
