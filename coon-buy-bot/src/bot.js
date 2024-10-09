@@ -154,10 +154,10 @@ async function trackRealTimeBuys() {
 }
 
 // Parse transfer amount from logs
-//function parseTransferAmount(log) {
-//    const match = log.match(/Transfer ([0-9.]+) tokens/);
- //   return match ? parseFloat(match[1]) : 0;
-//}
+function parseTransferAmount(log) {
+    const match = log.match(/Transfer ([0-9.]+) tokens/);
+   return match ? parseFloat(match[1]) : 0;
+}
 function parseTokenAmount(accountData) {
   // Implement your custom parsing logic here based on the token implementation
   // For example, if the amount is stored as a 64-bit integer:
