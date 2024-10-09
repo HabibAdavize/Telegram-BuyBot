@@ -1,10 +1,10 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs').promises;
-const { Connection, PublicKey } = require('@solana/web3.js');
+const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
-
+const WebSocket = require('ws');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -13,11 +13,12 @@ const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection(process.env.SOLANA_RPC_URL); // Initialize Solana connection
+const connection = new Connection("https://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e", { wsEndpoint: "wss://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e" }); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
-
+const ws = new WebSocket(process.env.SOLANA_RPC_URL);
+let previousTokenBalance = 0;
 // Global variables (will be loaded from storage)
 let settings = {
     trackingEnabled: false,
@@ -105,8 +106,56 @@ async function fetchTokenDetails() {
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+async function trackRealTimeTokenTransactions(tokenAccountAddress) {
+    // Get initial token balance
+    const tokenAccountInfo = await connection.getParsedAccountInfo(tokenAccountAddress);
+    if (tokenAccountInfo.value) {
+        console.log(tokenAccountInfo)
+        previousTokenBalance = await connection.getBalance(tokenAddress);
+    } else {
+        console.error('Unable to fetch token account info.');
+        return;
+    }
+    console.log(`Initial token balance: ${previousTokenBalance} tokens`);
 
-// Real-time buy tracking for the token
+    // Subscribe to token account changes
+    connection.onAccountChange(tokenAccountAddress, async(accountInfo, context) => {
+        const parsedInfo = accountInfo.data.parsed.info;
+        console.log(accountInfo)
+        const currentTokenBalance = parsedInfo.tokenAmount.uiAmount;
+
+        // Check if the token balance has changed
+        if (currentTokenBalance !== previousTokenBalance) {
+            const amountTransacted = currentTokenBalance - previousTokenBalance;
+            previousTokenBalance = currentTokenBalance; // Update the previous balance
+
+            // Notify users about the token transaction
+            notifyUsers(amountTransacted);
+        }
+    });
+
+    console.log('Listening for real-time token transactions...');
+}
+const getTransactions = async(address, numTx = 10) => {
+        // const pubKey = new PublicKey(address);
+        let transactionList = await connection.getSignaturesForAddress(address, { limit: numTx });
+
+        //Add this code
+        let signatureList = transactionList.map(transaction => transaction.signature);
+        let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
+        //--END of new code 
+
+        transactionList.forEach((transaction, i) => {
+            console.log(JSON.stringify(transactionDetails[i]))
+            const date = new Date(transaction.blockTime * 1000);
+            console.log(`Transaction No: ${i+1}`);
+            console.log(`Signature: ${transaction.signature}`);
+            console.log(`Time: ${date}`);
+            console.log(`Status: ${transaction.confirmationStatus}`);
+            console.log(("-").repeat(20));
+        })
+    }
+    // Real-time buy tracking for the token
 async function trackRealTimeBuys() {
     console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
 
@@ -130,9 +179,12 @@ function parseTransferAmount(log) {
     return match ? parseFloat(match[1]) : 0;
 }
 
-
-
-
+function parseTokenAmount(accountData) {
+    // Implement your custom parsing logic here based on the token implementation
+    // For example, if the amount is stored as a 64-bit integer:
+    const amountBuffer = Buffer.from(accountData.slice(0, 8));
+    return amountBuffer.readBigInt64LE();
+}
 // Notify all groups about the buy
 async function notifyGroups(amount) {
     for (const chatId of settings.groupChatIds) {
@@ -184,7 +236,7 @@ async function sendBuyNotification(chatId, amount) {
     caption += `📊 Market Cap: $${formatNumber(marketCap)}\n`;
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
     caption += `📈 24h Volume: $${formatNumber(volume24h)}\n`;
-    caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](${settings.dexScreenerUrl})\n`;
+    caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
     caption += `#️⃣ Hash [here](https://solscan.io/tx/${generateRandomTxnHash()}) 🏅 Trending [here](http://t.me/CryptoTrendingOfficial)\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
 
@@ -368,7 +420,11 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-    await trackRealTimeBuys(); // Start real-time tracking for token buys
+    await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+    await trackRealTimeBuys()
+    let n = await connection.getBalance(tokenAddress)
+    console.log("balance", n)
+    await getTransactions(tokenAddress)
 }
 
 // Start the bot
