@@ -1,7 +1,7 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs').promises;
-const { Connection, PublicKey } = require('@solana/web3.js');
+const { Connection, PublicKey, clusterApiUrl} = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
 const WebSocket = require('ws');
@@ -13,11 +13,12 @@ const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed"); // Initialize Solana connection
+const connection = new Connection(clusterApiUrl('mainnet-beta'), "confirmed"); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
 const ws = new WebSocket(process.env.SOLANA_RPC_URL);
+let previousTokenBalance = 0;
 // Global variables (will be loaded from storage)
 let settings = {
     trackingEnabled: false,
@@ -105,23 +106,34 @@ async function fetchTokenDetails() {
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
-ws.onmessage = (message) => {
-  const parsedMessage = JSON.parse(message.data);
-
-  if (parsedMessage.method === 'accountUpdate') {
-    const accountInfo = parsedMessage.params[0].account;
-    const tokenAccount = new PublicKey(accountInfo.owner);
-
-    if (tokenAccount.equals(tokenAddress)) {
-      // Token account balance has changed
-      const newBalance = parseTokenAmount(accountInfo.data);
-      console.log('New balance:', newBalance);
-
-      // Call notifyUsers(amount) with the extracted amount
-      notifyUsers(newBalance);
+async function trackRealTimeTokenTransactions(tokenAccountAddress) {
+    // Get initial token balance
+    const tokenAccountInfo = await connection.getParsedAccountInfo(tokenAccountAddress);
+    if (tokenAccountInfo.value) {
+        previousTokenBalance = tokenAccountInfo.value.data.parsed.info.tokenAmount.uiAmount;
+    } else {
+        console.error('Unable to fetch token account info.');
+        return;
     }
-  }
-};
+    console.log(`Initial token balance: ${previousTokenBalance} tokens`);
+
+    // Subscribe to token account changes
+    connection.onAccountChange(tokenAccountAddress, async (accountInfo, context) => {
+        const parsedInfo = accountInfo.data.parsed.info;
+        const currentTokenBalance = parsedInfo.tokenAmount.uiAmount;
+
+        // Check if the token balance has changed
+        if (currentTokenBalance !== previousTokenBalance) {
+            const amountTransacted = currentTokenBalance - previousTokenBalance;
+            previousTokenBalance = currentTokenBalance; // Update the previous balance
+
+            // Notify users about the token transaction
+            notifyUsers(amountTransacted);
+        }
+    });
+
+    console.log('Listening for real-time token transactions...');
+}
 // Real-time buy tracking for the token
 async function trackRealTimeBuys() {
     console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
@@ -385,7 +397,7 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-    await trackRealTimeBuys(); // Start real-time tracking for token buys
+    await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
 }
 
 // Start the bot
