@@ -121,7 +121,7 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
     // Subscribe to token account changes
     connection.onAccountChange(tokenAccountAddress, async (accountInfo, context) => {
         const parsedInfo = accountInfo.data.parsed.info;
-        console.log(parsedInfo)
+        console.log(accountInfo)
         const currentTokenBalance = parsedInfo.tokenAmount.uiAmount;
 
         // Check if the token balance has changed
