@@ -121,6 +121,7 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
     // Subscribe to token account changes
     connection.onAccountChange(tokenAccountAddress, async (accountInfo, context) => {
         const parsedInfo = accountInfo.data.parsed.info;
+        console.log(parsedInfo)
         const currentTokenBalance = parsedInfo.tokenAmount.uiAmount;
 
         // Check if the token balance has changed
@@ -399,7 +400,7 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-   // await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+    await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
     await trackRealTimeBuys()
 }
 
