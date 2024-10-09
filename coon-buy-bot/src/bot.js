@@ -17,7 +17,7 @@ const connection = new Connection("https://api.mainnet-beta.solana.com", "confir
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
-
+const ws = new WebSocket(process.env.SOLANA_RPC_URL);
 // Global variables (will be loaded from storage)
 let settings = {
     trackingEnabled: false,
