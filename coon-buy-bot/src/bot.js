@@ -136,7 +136,7 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
 
     console.log('Listening for real-time token transactions...');
 }
-const getTransactions = async(address, numTx = 20) => {
+const getTransactions = async(address, numTx = 15) => {
     // const pubKey = new PublicKey(address);
     let transactionList = await connection.getSignaturesForAddress(address, { limit: numTx });
 
@@ -145,6 +145,7 @@ const getTransactions = async(address, numTx = 20) => {
     let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
     let txs_list = []
         //--END of new code 
+    require('fs').writeFileSync('./ddidy.json', JSON.stringify(transactionDetails.map(n => n.meta.innerInstructions[0] ? n.meta.innerInstructions[0].instructions : {})))
 
     transactionList.forEach((transaction, i) => {
         let instruction = transactionDetails[i].meta.innerInstructions[0]
@@ -267,7 +268,7 @@ async function sendBuyNotification(chatId, amount, signature) {
     caption += `📊 Market Cap: $${formatNumber(marketCap)}\n`;
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
     caption += `📈 24h Volume: $${formatNumber(volume24h)}\n`;
-    caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
+    caption += `💳 Buy [here](https://raydium.io/swap/?inputMint=7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk&outputMint=Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
     caption += `#️⃣ Hash [here](https://solscan.io/tx/${signature})\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
 
