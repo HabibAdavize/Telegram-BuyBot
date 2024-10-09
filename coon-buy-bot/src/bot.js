@@ -146,7 +146,7 @@ const getTransactions = async(address, numTx=10) => {
     //--END of new code 
     
     transactionList.forEach((transaction, i) => {
-        console.log(transactionDetails[i])
+        console.log(JSON.stringify(transactionDetails[i]))
         const date = new Date(transaction.blockTime*1000);
         console.log(`Transaction No: ${i+1}`);
         console.log(`Signature: ${transaction.signature}`);
