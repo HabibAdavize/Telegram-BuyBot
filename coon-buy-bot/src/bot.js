@@ -13,7 +13,7 @@ const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection(process.env.SOLANA_RPC_URL, "confirmed"); // Initialize Solana connection
+const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed"); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
