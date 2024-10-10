@@ -9,7 +9,6 @@ const WebSocket = require('ws');
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
 
-const axios = require('axios'); // You can also use fetch if preferred
 
 function pingUrl(url) {
     axios.get(url)
