@@ -8,6 +8,32 @@ const WebSocket = require('ws');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
+
+const axios = require('axios'); // You can also use fetch if preferred
+
+function pingUrl(url) {
+    axios.get(url)
+        .then(response => {
+            console.log(`Ping to ${url} successful. Status code: ${response.status}`);
+        })
+        .catch(error => {
+            console.error(`Error pinging ${url}:`, error.message);
+        });
+}
+
+const urlToPing = process.env.BOT_URL; // Replace with your URL
+const interval = 3 * 60 * 1000; // 2 minutes in milliseconds
+
+// Ping every 2 minutes
+setInterval(() => {
+    pingUrl(urlToPing);
+}, interval);
+
+
+
+
+
+
 // Set webhook using Vercel URL
 const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
