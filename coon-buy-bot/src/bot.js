@@ -348,6 +348,7 @@ bot.on('callback_query', async(query) => {
             bot.once('text', async(msg) => {
                 const emoji = msg.text.trim();
                 settings.customEmojis.push(emoji); // Add the emoji to the list
+                console.log(settings.customEmojis)
                 await saveSettings();
                 bot.sendMessage(chatId, `Custom buy emoji set to: ${emoji}`);
             });
