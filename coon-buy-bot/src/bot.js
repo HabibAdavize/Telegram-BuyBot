@@ -502,7 +502,7 @@ let testing = async()=>{
 
 }
 
-//testing()
+testing()
            
 
 // Handle webhook requests from Vercel
