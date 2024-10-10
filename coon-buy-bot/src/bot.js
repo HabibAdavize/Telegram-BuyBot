@@ -145,7 +145,9 @@ function showMainMenu(chatId) {
 // Handle the /start command
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    showMainMenu(chatId); // Show the main menu when the bot starts
+  //  showMainMenu(chatId); // Show the main menu when the bot starts
+    const menuCaption = 'Welcome to the Cooncoin Bot! Please choose an option:';
+    bot.sendMessage(chatId, menuCaption);
 });
 
 // Send buy notification
