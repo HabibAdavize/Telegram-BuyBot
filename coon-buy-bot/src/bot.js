@@ -429,6 +429,7 @@ bot.onText(/\/addgroup/, async(msg) => {
 // Command to set custom emojis
 bot.onText(/\/setemojis (.+)/, async(msg, match) => {
     const emojis = match[1].split(' ').filter(emoji => emoji); // Split by space and filter out empty strings
+    console.log(emojis)
     settings.customEmojis = emojis;
     await saveSettings();
     bot.sendMessage(msg.chat.id, `Custom emojis set to: ${emojis.join(' ')}`);
