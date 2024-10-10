@@ -259,7 +259,7 @@ function showMainMenu(chatId) {
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
   //  showMainMenu(chatId); // Show the main menu when the bot starts
-const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n Send /track to track transactions \n Send /addgroup to add your bot to the group \n After that you're good to go 🎉🎉`;
+const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
     bot.sendMessage(chatId, menuCaption);
 });
 
@@ -429,7 +429,7 @@ bot.onText(/\/addgroup/, async(msg) => {
 // Command to set custom emojis
 bot.onText(/\/setemojis (.+)/, async(msg, match) => {
     const emojis = match[1].split(' ').filter(emoji => emoji); // Split by space and filter out empty strings
-    console.log(emojis)
+    console.log(match)
     settings.customEmojis = emojis;
     await saveSettings();
     bot.sendMessage(msg.chat.id, `Custom emojis set to: ${emojis.join(' ')}`);
