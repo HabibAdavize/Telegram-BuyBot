@@ -493,8 +493,13 @@ async function init() {
 init();
 //test
 let testing = async()=>{
-   let transactionDetails = await connection.getParsedTransactions(["RJi3gC3pwN5rY5p5RKxM1VWVnsGz37KP2utfiyctSry1isye6ikbLxHuBsXDX6kvgr4yZgvMMZ9CT9Ruhx4yiTC"], { maxSupportedTransactionVersion: 0 });
-    console.log(JSON.stringify(transactionDetails))
+   let transactionList = await connection.getSignaturesForAddress(tokenAddress, { limit: 10});
+
+    //Add this code
+    let signatureList = transactionList.map(transaction => transaction.signature);
+    console.log(signatureList)
+    //let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
+
 }
 
 //testing()
