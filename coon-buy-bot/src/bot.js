@@ -288,7 +288,7 @@ async function sendBuyNotification(chatId, amount, signature) {
     const amountOfCooncoin = dollarAmount / tokenPrice; // Calculate Cooncoin amount
 
     // Construct the notification message
-    let caption = `*${tokenName} Buy Notification!*\n ${settings.customEmojis[0]}\n\n`;
+    let caption = `*${tokenName} Buy Notification!*\n ${settings.customEmojis[settings.customEmojis. length-1].repeat(5)}\n\n`;
     caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
     caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n`;
     caption += `🏷️ Price: $${tokenPrice.toFixed(8)}\n`;
@@ -348,7 +348,7 @@ bot.on('callback_query', async(query) => {
             bot.once('text', async(msg) => {
                 const emoji = msg.text.trim();
                 settings.customEmojis.push(emoji); // Add the emoji to the list
-                console.log(settings.customEmojis)
+           //     console.log(settings.customEmojis)
                 await saveSettings();
                 bot.sendMessage(chatId, `Custom buy emoji set to: ${emoji}`);
             });
