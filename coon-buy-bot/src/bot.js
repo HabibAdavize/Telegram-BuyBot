@@ -492,8 +492,13 @@ async function init() {
 // Start the bot
 init();
 //test
-    let transactionDetails = await connection.getParsedTransactions(["RJi3gC3pwN5rY5p5RKxM1VWVnsGz37KP2utfiyctSry1isye6ikbLxHuBsXDX6kvgr4yZgvMMZ9CT9Ruhx4yiTC"], { maxSupportedTransactionVersion: 0 });
-    console.log(transactionDetails)       
+let testing = async()=>{
+   let transactionDetails = await connection.getParsedTransactions(["RJi3gC3pwN5rY5p5RKxM1VWVnsGz37KP2utfiyctSry1isye6ikbLxHuBsXDX6kvgr4yZgvMMZ9CT9Ruhx4yiTC"], { maxSupportedTransactionVersion: 0 });
+    console.log(transactionDetails) 
+}
+
+testing()
+           
 
 // Handle webhook requests from Vercel
 const app = express();
