@@ -290,11 +290,11 @@ async function sendBuyNotification(chatId, amount, signature) {
     // Construct the notification message
     let caption = `*${tokenName} Buy Notification!*\n ${settings.customEmojis[settings.customEmojis. length-1].repeat(5)}\n\n`;
     caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
-    caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n`;
+    caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n\n`;
     caption += `🏷️ Price: $${tokenPrice.toFixed(8)}\n`;
     caption += `📊 Market Cap: $${formatNumber(marketCap)}\n`;
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
-    caption += `📈 24h Volume: $${formatNumber(volume24h)}\n`;
+    caption += `📈 24h Volume: $${formatNumber(volume24h)}\n\n`;
     caption += `💳 Buy [here](https://raydium.io/swap/?inputMint=7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk&outputMint=Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
     caption += `#️⃣ Hash [here](https://solscan.io/tx/${signature})\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
