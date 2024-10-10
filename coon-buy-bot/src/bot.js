@@ -288,7 +288,7 @@ async function sendBuyNotification(chatId, amount, signature) {
     const amountOfCooncoin = dollarAmount / tokenPrice; // Calculate Cooncoin amount
 
     // Construct the notification message
-    let caption = `*${tokenName} Buy Notification!*\n ${settings.customEmojis[settings.customEmojis. length-1].repeat(5)}\n\n`;
+    let caption = `*${tokenName} Buy Notification!*\n${settings.customEmojis[settings.customEmojis. length-1].repeat(5)}\n\n`;
     caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
     caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n\n`;
     caption += `🏷️ Price: $${tokenPrice.toFixed(8)}\n`;
