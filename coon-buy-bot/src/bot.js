@@ -170,7 +170,7 @@ const getTransactions = async(address, numTx = 15) => {
     let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
     let txs_list = []
         //--END of new code 
-    require('fs').writeFileSync('./ddidy.json', JSON.stringify(transactionDetails.map(n => n.meta.innerInstructions[0] ? n.meta.innerInstructions[0].instructions : {})))
+   // require('fs').writeFileSync('./ddidy.json', JSON.stringify(transactionDetails.map(n => n.meta.innerInstructions[0] ? n.meta.innerInstructions[0].instructions : {})))
 
     transactionList.forEach((transaction, i) => {
         let instruction = transactionDetails[i].meta.innerInstructions[0]
@@ -259,7 +259,7 @@ function showMainMenu(chatId) {
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
   //  showMainMenu(chatId); // Show the main menu when the bot starts
-const menuCaption = 'Welcome to the Cooncoin Bot! Please choose an option:';
+const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n Send /track to track transactions \n Send /addgroup to add your bot to the group \n After that you're good to go 🎉🎉`;
     bot.sendMessage(chatId, menuCaption);
 });
 
@@ -288,7 +288,7 @@ async function sendBuyNotification(chatId, amount, signature) {
     const amountOfCooncoin = dollarAmount / tokenPrice; // Calculate Cooncoin amount
 
     // Construct the notification message
-    let caption = `*${tokenName} Buy Notification!*\n\n`;
+    let caption = `*${tokenName} Buy Notification!*\n ${settings.customEmojis[0]}\n\n`;
     caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
     caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n`;
     caption += `🏷️ Price: $${tokenPrice.toFixed(8)}\n`;
