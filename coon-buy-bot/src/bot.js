@@ -296,7 +296,7 @@ async function sendBuyNotification(chatId, amount, signature) {
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
     caption += `📈 24h Volume: $${formatNumber(volume24h)}\n\n`;
     caption += `💳 Buy [here](https://raydium.io/swap/?inputMint=7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk&outputMint=Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
-    caption += `#️⃣ Hash [here](https://solscan.io/tx/${signature})\n`;
+    caption += `#️⃣ Hash [here](https://solscan.io/tx/${signature})\n\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
 
     // Send the notification message
