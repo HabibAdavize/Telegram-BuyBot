@@ -259,8 +259,12 @@ function showMainMenu(chatId) {
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
   //  showMainMenu(chatId); // Show the main menu when the bot starts
+
 const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
-    bot.sendMessage(chatId, menuCaption);
+
+
+
+
 });
 
 // Send buy notification
