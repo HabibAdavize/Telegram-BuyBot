@@ -1,23 +1,49 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs').promises;
-const { Connection, PublicKey } = require('@solana/web3.js');
+const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
-
+const WebSocket = require('ws');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+
+
+
+function pingUrl(url) {
+    axios.get(url)
+        .then(response => {
+            console.log(`Ping to ${url} successful. Status code: ${response.status}`);
+        })
+        .catch(error => {
+            console.error(`Error pinging ${url}:`, error.message);
+        });
+}
+
+const urlToPing = process.env.BOT_URL; // Replace with your URL
+const interval = 3 * 60 * 1000; // 2 minutes in milliseconds
+
+// Ping every 2 minutes
+setInterval(() => {
+    pingUrl(urlToPing);
+}, interval);
+
+
+
+
+
 
 // Set webhook using Vercel URL
 const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection(process.env.SOLANA_RPC_URL); // Initialize Solana connection
+const connection = new Connection("https://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e", { wsEndpoint: "wss://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e" }); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
-
+const ws = new WebSocket(process.env.SOLANA_RPC_URL);
+let previousTokenBalance = 0;
 // Global variables (will be loaded from storage)
 let settings = {
     trackingEnabled: false,
@@ -105,34 +131,121 @@ async function fetchTokenDetails() {
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+async function trackRealTimeTokenTransactions(tokenAccountAddress) {
+    // Get initial token balance
+    const tokenAccountInfo = await connection.getParsedAccountInfo(tokenAccountAddress);
+    if (tokenAccountInfo.value) {
+        console.log(tokenAccountInfo)
+        previousTokenBalance = await connection.getBalance(tokenAddress);
+    } else {
+        console.error('Unable to fetch token account info.');
+        return;
+    }
+    console.log(`Initial token balance: ${previousTokenBalance} tokens`);
 
-// Real-time buy tracking for the token
-async function trackRealTimeBuys() {
-    console.log(`Tracking real-time buys for token: ${tokenAddress.toString()}`);
+    // Subscribe to token account changes
+    connection.onAccountChange(tokenAccountAddress, async(accountInfo, context) => {
+        const parsedInfo = accountInfo.data.parsed.info;
+        console.log(accountInfo)
+        const currentTokenBalance = parsedInfo.tokenAmount.uiAmount;
 
-    connection.onLogs(tokenAddress, async(logs) => {
-        for (const log of logs.logs) {
-            if (log.includes('transfer')) {
-                const amount = parseTransferAmount(log); // Custom function to parse amount
-                if (amount >= settings.minBuyAmount) {
-                    console.log(`New buy detected: ${amount} tokens`);
-                    await notifyGroups(amount);
-                }
-            }
+        // Check if the token balance has changed
+        if (currentTokenBalance !== previousTokenBalance) {
+            const amountTransacted = currentTokenBalance - previousTokenBalance;
+            previousTokenBalance = currentTokenBalance; // Update the previous balance
+
+            // Notify users about the token transaction
+            notifyUsers(amountTransacted);
         }
     });
+
+    console.log('Listening for real-time token transactions...');
+}
+const getTransactions = async(address, numTx = 15) => {
+    // const pubKey = new PublicKey(address);
+    let transactionList = await connection.getSignaturesForAddress(address, { limit: numTx });
+
+    //Add this code
+    let signatureList = transactionList.map(transaction => transaction.signature);
+    let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
+    let txs_list = []
+        //--END of new code 
+   // require('fs').writeFileSync('./ddidy.json', JSON.stringify(transactionDetails.map(n => n.meta.innerInstructions[0] ? n.meta.innerInstructions[0].instructions : {})))
+
+    transactionList.forEach((transaction, i) => {
+        let instruction = transactionDetails[i].meta.innerInstructions[0]
+            //console.log(instruction ? instruction.instructions.filter(data => data.parsed).map(data => ({ mint: data.parsed.info.mint, amount: data.parsed.info.tokenAmount })) : transactionDetails[i].meta.innerInstructions)
+            // console.log(instruction ? instruction.instructions.filter(d => !d.parsed ? d.parsed.info.tokenAmount : false) : '');
+        let txs = instruction ? instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
+            mint: d.parsed.info.mint,
+            tokenAmount: d.parsed.info.tokenAmount,
+            signature: transactionDetails[i].transaction.signatures
+
+        })) : null
+
+        if (txs === null || txs.length === 0) {
+            return
+        }
+
+        txs_list.push(txs)
+            // const date = new Date(transaction.blockTime * 1000);
+            // // console.log(`Transaction No: ${i+1}`);
+            // // console.log(`Signature: ${transaction.signature}`);
+            // // console.log(`Time: ${date}`);
+            // // console.log(`Status: ${transaction.confirmationStatus}`);
+            // console.log(("-").repeat(20));
+    })
+
+    // console.log(txs_list)
+
+    return txs_list
 }
 
-// Parse transfer amount from logs
-function parseTransferAmount(log) {
-    const match = log.match(/Transfer ([0-9.]+) tokens/);
-    return match ? parseFloat(match[1]) : 0;
+
+let InitSignature = null
+
+let startPolling = () => {
+    setInterval(async() => {
+
+            let txs = await getTransactions(tokenAddress) || []
+                // console.log(InitSignature)
+
+            // InitSignature === null && txs.shift()
+
+            if (InitSignature === null) {
+
+                InitSignature = txs.shift()[0].signature[0]
+
+                return
+            }
+
+            let ts_id = 0
+            while (txs[ts_id][0].signature[0] !== InitSignature) {
+
+                let required_amount = txs[ts_id].filter(data => data.mint === process.env.TOKEN_ADDRESS ? false : true)
+
+                let amount = required_amount[0].tokenAmount.uiAmount
+                notifyGroups(amount, txs[ts_id][0].signature[0])
+                ts_id++
+            }
+
+            //if the signature of the topmost tx is differnt 
+
+            if (txs[0][0].signature[0] !== InitSignature) {
+                InitSignature = txs[0][0].signature[0]
+            }
+
+        },
+        10000)
 }
+
+
+
 
 // Notify all groups about the buy
-async function notifyGroups(amount) {
+async function notifyGroups(amount, signature) {
     for (const chatId of settings.groupChatIds) {
-        await sendBuyNotification(chatId, amount);
+        await sendBuyNotification(chatId, amount, signature);
     }
 }
 
@@ -146,12 +259,16 @@ function showMainMenu(chatId) {
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
   //  showMainMenu(chatId); // Show the main menu when the bot starts
-    const menuCaption = 'Welcome to the Cooncoin Bot! Please choose an option:';
-    bot.sendMessage(chatId, menuCaption);
+
+const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
+
+
+
+
 });
 
 // Send buy notification
-async function sendBuyNotification(chatId, amount) {
+async function sendBuyNotification(chatId, amount, signature) {
     const tokenDetails = await fetchTokenDetails(); // Fetch token details from DexScreener
 
     if (!tokenDetails) {
@@ -175,15 +292,15 @@ async function sendBuyNotification(chatId, amount) {
     const amountOfCooncoin = dollarAmount / tokenPrice; // Calculate Cooncoin amount
 
     // Construct the notification message
-    let caption = `*${tokenName} Buy Notification!*\n\n`;
+    let caption = `*${tokenName} Buy Notification!*\n${settings.customEmojis[settings.customEmojis. length-1].repeat(dollarAmount>20?20:dollarAmount.toFixed(0))}\n\n`;
     caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
-    caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n`;
+    caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n\n`;
     caption += `🏷️ Price: $${tokenPrice.toFixed(8)}\n`;
     caption += `📊 Market Cap: $${formatNumber(marketCap)}\n`;
     caption += `💧 Liquidity: $${formatNumber(liquidity)}\n`;
-    caption += `📈 24h Volume: $${formatNumber(volume24h)}\n`;
-    caption += `💳 Buy [here](https://raydium.io/swap/?inputCurrency=sol&outputCurrency=${tokenAddress.toString()}&fixed=in)    💫 Chart [here](${settings.dexScreenerUrl})\n`;
-    caption += `#️⃣ Hash [here](https://solscan.io/tx/${generateRandomTxnHash()}) 🏅 Trending [here](http://t.me/CryptoTrendingOfficial)\n`;
+    caption += `📈 24h Volume: $${formatNumber(volume24h)}\n\n`;
+    caption += `💳 Buy [here](https://raydium.io/swap/?inputMint=7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk&outputMint=Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB)    💫 Chart [here](https://dexscreener.com/solana/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk)\n`;
+    caption += `#️⃣ Hash [here](https://solscan.io/tx/${signature})\n\n`;
     caption += `📈 *Tracking is currently:* ${settings.trackingEnabled ? 'enabled' : 'disabled'}`;
 
     // Send the notification message
@@ -235,6 +352,7 @@ bot.on('callback_query', async(query) => {
             bot.once('text', async(msg) => {
                 const emoji = msg.text.trim();
                 settings.customEmojis.push(emoji); // Add the emoji to the list
+           //     console.log(settings.customEmojis)
                 await saveSettings();
                 bot.sendMessage(chatId, `Custom buy emoji set to: ${emoji}`);
             });
@@ -304,6 +422,7 @@ bot.onText(/\/untrack/, async(msg) => {
     bot.sendMessage(msg.chat.id, 'Tracking deactivated.');
 });
 
+
 // Command to add group chat ID
 bot.onText(/\/addgroup/, async(msg) => {
     const chatId = msg.chat.id;
@@ -315,6 +434,7 @@ bot.onText(/\/addgroup/, async(msg) => {
 // Command to set custom emojis
 bot.onText(/\/setemojis (.+)/, async(msg, match) => {
     const emojis = match[1].split(' ').filter(emoji => emoji); // Split by space and filter out empty strings
+    console.log(match)
     settings.customEmojis = emojis;
     await saveSettings();
     bot.sendMessage(msg.chat.id, `Custom emojis set to: ${emojis.join(' ')}`);
@@ -366,11 +486,28 @@ bot.onText(/\/buy (\d+(\.\d+)?)/, async(msg, match) => {
 async function init() {
     await loadSettings();
     console.log('Bot is running...');
-    await trackRealTimeBuys(); // Start real-time tracking for token buys
+    // await trackRealTimeTokenTransactions(tokenAddress) // Start real-time tracking for token buys
+    // await trackRealTimeBuys()
+    // let n = await connection.getBalance(tokenAddress)
+    // console.log("balance", n)
+    startPolling()
 }
 
 // Start the bot
 init();
+//test
+let testing = async()=>{
+   let transactionList = await connection.getSignaturesForAddress(tokenAddress, { limit: 10});
+
+    //Add this code
+    let signatureList = transactionList.map(transaction => transaction.signature);
+    console.log(signatureList)
+    //let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
+
+}
+
+testing()
+           
 
 // Handle webhook requests from Vercel
 const app = express();
