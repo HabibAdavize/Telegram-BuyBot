@@ -510,7 +510,7 @@ let testing = async()=>{
     console.log(JSON.stringify(transactionDetails))
 }
 
-testing()
+//testing()
            
 
 // Handle webhook requests from Vercel
