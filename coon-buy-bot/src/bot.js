@@ -161,6 +161,31 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
 
     console.log('Listening for real-time token transactions...');
 }
+
+function filterTransactionsWithAmount(data, signature) {
+  const results = [];
+
+  // Loop through each innerInstruction
+  data.innerInstructions.forEach(innerInstruction => {
+    innerInstruction.instructions.forEach(instruction => {
+      // Check if the instruction contains 'parsed' and 'info' and if 'info' has an 'amount'
+      if (instruction.parsed && instruction.parsed.info && instruction.parsed.info.tokenAmount) {
+        results.push({
+          mint: instruction.parsed.info.mint,
+          tokenAmount: instruction.parsed.info.tokenAmount,
+          signature, 
+          sol: true
+        });
+      }
+    });
+  });
+
+  return results;
+}
+
+
+
+
 const getTransactions = async(address, numTx = 15) => {
     // const pubKey = new PublicKey(address);
     let transactionList = await connection.getSignaturesForAddress(address, { limit: numTx });
@@ -181,7 +206,7 @@ const getTransactions = async(address, numTx = 15) => {
             tokenAmount: d.parsed.info.tokenAmount,
             signature: transactionDetails[i].transaction.signatures
 
-        })) : null
+        })) : filterTransactionsWithAmount(transactionDetails[i].meta,transactionDetails[i].transaction.signatures )
 
         if (txs === null || txs.length === 0) {
             return
@@ -226,7 +251,7 @@ let startPolling = () => {
                   let required_amount = txs[ts_id][0]
 
                 let amount = required_amount.tokenAmount.uiAmount
-                notifyGroups(amount, txs[ts_id][0].signature[0])  
+                notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)  
                 }
 
                 
@@ -247,9 +272,9 @@ let startPolling = () => {
 
 
 // Notify all groups about the buy
-async function notifyGroups(amount, signature) {
+async function notifyGroups(amount, signature, sol) {
     for (const chatId of settings.groupChatIds) {
-        await sendBuyNotification(chatId, amount, signature);
+        await sendBuyNotification(chatId, amount, signature, sol);
     }
 }
 
@@ -272,7 +297,7 @@ const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instru
 });
 
 // Send buy notification
-async function sendBuyNotification(chatId, amount, signature) {
+async function sendBuyNotification(chatId, amount, signature, sol) {
     const tokenDetails = await fetchTokenDetails(); // Fetch token details from DexScreener
 
     if (!tokenDetails) {
@@ -297,7 +322,12 @@ async function sendBuyNotification(chatId, amount, signature) {
 
     // Construct the notification message
     let caption = `*${tokenName} Buy Notification!*\n${settings.customEmojis[settings.customEmojis. length-1].repeat(dollarAmount>20?20:dollarAmount.toFixed(0))}\n\n`;
-    caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
+    if(sol){
+        caption += `💵 SOL Amount: $${dollarAmount} ($${dollarAmount.toFixed(2)})\n`;
+    }else{
+        caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
+    }
+
     caption += `💰 Amount of Cooncoin: ${amountOfCooncoin.toFixed(3)} ${tokenSymbol}\n\n`;
     caption += `🏷️ Price: $${tokenPrice.toFixed(8)}\n`;
     caption += `📊 Market Cap: $${formatNumber(marketCap)}\n`;
