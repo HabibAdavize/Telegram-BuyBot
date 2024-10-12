@@ -222,10 +222,14 @@ let startPolling = () => {
             let ts_id = 0
             while (txs[ts_id][0].signature[0] !== InitSignature) {
 
-                let required_amount = txs[ts_id].filter(data => data.mint === process.env.TOKEN_ADDRESS ? false : true)
+                if(txs[ts_id][1].mint === process.env.TOKEN_ADDRESS ){
+                  let required_amount = txs[ts_id][0]
 
-                let amount = required_amount[0].tokenAmount.uiAmount
-                notifyGroups(amount, txs[ts_id][0].signature[0])
+                let amount = required_amount.tokenAmount.uiAmount
+                notifyGroups(amount, txs[ts_id][0].signature[0])  
+                }
+
+                
                 ts_id++
             }
 
