@@ -100,7 +100,8 @@ async function fetchTokenDetails() {
     try {
         const response = await axios.get('https://api.dexscreener.com/latest/dex/tokens/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk'); // Example API endpoint
         const pairData = response.data.pairs[0]; // Get the first pair
-
+        const sol_data= await axios.get("https://price.jup.ag/v6/price?ids=SOL")
+        const sol_price = sol_data.data.SOL.price
         // Extract relevant details
         const tokenPrice = parseFloat(pairData.priceUsd); // Token price in USD
         const marketCap = pairData.marketCap; // Market cap
@@ -120,6 +121,7 @@ async function fetchTokenDetails() {
             tokenSymbol,
             quoteTokenName,
             quoteTokenSymbol,
+            sol_price
         };
     } catch (error) {
         console.error('Error fetching token details:', error);
@@ -314,6 +316,8 @@ async function sendBuyNotification(chatId, amount, signature, sol) {
         tokenSymbol,
         quoteTokenName,
         quoteTokenSymbol,
+        sol_price
+
     } = tokenDetails;
 
     // Calculate the amount of Cooncoin that can be bought with the dollar amount
@@ -323,7 +327,7 @@ async function sendBuyNotification(chatId, amount, signature, sol) {
     // Construct the notification message
     let caption = `*${tokenName} Buy Notification!*\n${settings.customEmojis[settings.customEmojis. length-1].repeat(dollarAmount>20?20:dollarAmount.toFixed(0))}\n\n`;
     if(sol){
-        caption += `💵 SOL Amount: $${dollarAmount} ($${dollarAmount.toFixed(2)})\n`;
+        caption += `💵 SOL Amount: $${(dollarAmount/Number(sol_price)).toFixed(3)} ($${dollarAmount.toFixed(2)})\n`;
     }else{
         caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
     }
