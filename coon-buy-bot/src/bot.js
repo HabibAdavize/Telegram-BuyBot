@@ -497,13 +497,13 @@ async function init() {
 init();
 //test
 let testing = async()=>{
-   let transactionList = await connection.getSignaturesForAddress(tokenAddress, { limit: 10});
+//   let transactionList = await connection.getSignaturesForAddress(tokenAddress, { limit: 10});
 
     //Add this code
-    let signatureList = transactionList.map(transaction => transaction.signature);
-    console.log(signatureList)
-    //let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
-
+    //let signatureList = transactionList.map(transaction => transaction.signature);
+   // console.log(signatureList)
+    let transactionDetails = await connection.getParsedTransactions(["pSfvhV2vtDsLWJp9Dx1YZgNLTusjDxKKJcuZZ1Z9PAPr3ico9Wdm5AC5Ez7DV4iCjk6rHWfYhfm8MzTJ7Jvo3p2"], { maxSupportedTransactionVersion: 0 });
+    console.log(transactionDetails)
 }
 
 testing()
