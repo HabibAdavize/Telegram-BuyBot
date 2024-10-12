@@ -503,7 +503,7 @@ let testing = async()=>{
     //let signatureList = transactionList.map(transaction => transaction.signature);
    // console.log(signatureList)
     let transactionDetails = await connection.getParsedTransactions(["pSfvhV2vtDsLWJp9Dx1YZgNLTusjDxKKJcuZZ1Z9PAPr3ico9Wdm5AC5Ez7DV4iCjk6rHWfYhfm8MzTJ7Jvo3p2"], { maxSupportedTransactionVersion: 0 });
-    console.log(transactionDetails)
+    console.log(JSON.stringify(transactionDetails))
 }
 
 testing()
