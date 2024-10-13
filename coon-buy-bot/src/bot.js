@@ -5,6 +5,7 @@ const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
 const WebSocket = require('ws');
+const { json } = require('body-parser');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -100,10 +101,10 @@ async function fetchTokenDetails() {
     try {
         const response = await axios.get('https://api.dexscreener.com/latest/dex/tokens/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk'); // Example API endpoint
         const pairData = response.data.pairs[0]; // Get the first pair
-        const sol_data= await axios.get("https://price.jup.ag/v6/price?ids=SOL")
-        //console.log(sol_data)    
+        const sol_data = await axios.get("https://price.jup.ag/v6/price?ids=SOL")
+            //console.log(sol_data)    
         const sol_price = sol_data.data.data.SOL.price
-        // Extract relevant details
+            // Extract relevant details
         const tokenPrice = parseFloat(pairData.priceUsd); // Token price in USD
         const marketCap = pairData.marketCap; // Market cap
         const volume24h = pairData.volume.h24; // 24h volume
@@ -166,24 +167,25 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
 }
 
 function filterTransactionsWithAmount(data, signature) {
-  const results = [];
+    console.log(signature)
+    const results = [];
 
-  // Loop through each innerInstruction
-  data.innerInstructions.forEach(innerInstruction => {
-    innerInstruction.instructions.forEach(instruction => {
-      // Check if the instruction contains 'parsed' and 'info' and if 'info' has an 'amount'
-      if (instruction.parsed && instruction.parsed.info && instruction.parsed.info.tokenAmount) {
-        results.push({
-          mint: instruction.parsed.info.mint,
-          tokenAmount: instruction.parsed.info.tokenAmount,
-          signature, 
-          sol: true
+    // Loop through each innerInstruction
+    data.innerInstructions.forEach(innerInstruction => {
+        innerInstruction.instructions.forEach(instruction => {
+            // Check if the instruction contains 'parsed' and 'info' and if 'info' has an 'amount'
+            if (instruction.parsed && instruction.parsed.info && instruction.parsed.info.tokenAmount) {
+                results.push({
+                    mint: instruction.parsed.info.mint,
+                    tokenAmount: instruction.parsed.info.tokenAmount,
+                    signature,
+                    sol: true
+                });
+            }
         });
-      }
     });
-  });
-
-  return results;
+    // console.log(results, signature)
+    return results;
 }
 
 
@@ -195,21 +197,33 @@ const getTransactions = async(address, numTx = 15) => {
 
     //Add this code
     let signatureList = transactionList.map(transaction => transaction.signature);
+    // console.log(signatureList)
     let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
     let txs_list = []
         //--END of new code 
-   // require('fs').writeFileSync('./ddidy.json', JSON.stringify(transactionDetails.map(n => n.meta.innerInstructions[0] ? n.meta.innerInstructions[0].instructions : {})))
+        // require('fs').writeFileSync('./ddidy.json', JSON.stringify(transactionDetails.map(n => n.meta.innerInstructions[0] ? n.meta.innerInstructions[0].instructions : {})))
 
     transactionList.forEach((transaction, i) => {
         let instruction = transactionDetails[i].meta.innerInstructions[0]
+            // console.log(transactionDetails[i].meta.innerInstructions[0] || transactionDetails[i].meta.innerInstructions)
             //console.log(instruction ? instruction.instructions.filter(data => data.parsed).map(data => ({ mint: data.parsed.info.mint, amount: data.parsed.info.tokenAmount })) : transactionDetails[i].meta.innerInstructions)
             // console.log(instruction ? instruction.instructions.filter(d => !d.parsed ? d.parsed.info.tokenAmount : false) : '');
-        let txs = instruction ? instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
-            mint: d.parsed.info.mint,
-            tokenAmount: d.parsed.info.tokenAmount,
-            signature: transactionDetails[i].transaction.signatures
 
-        })) : filterTransactionsWithAmount(transactionDetails[i].meta,transactionDetails[i].transaction.signatures )
+        let txs = null
+            // console.log(instruction, transactionDetails[i].transaction.signatures[0])
+        if (transactionDetails[i].meta.innerInstructions.length <= 1) {
+            txs = instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
+                mint: d.parsed.info.mint,
+                tokenAmount: d.parsed.info.tokenAmount,
+                signature: transactionDetails[i].transaction.signatures
+
+            }))
+        } else {
+
+            txs = filterTransactionsWithAmount(transactionDetails[i].meta, transactionDetails[i].transaction.signatures)
+        }
+
+
 
         if (txs === null || txs.length === 0) {
             return
@@ -250,14 +264,14 @@ let startPolling = () => {
             let ts_id = 0
             while (txs[ts_id][0].signature[0] !== InitSignature) {
 
-                if(txs[ts_id][1].mint === process.env.TOKEN_ADDRESS ){
-                  let required_amount = txs[ts_id][0]
+                if (txs[ts_id][1].mint === process.env.TOKEN_ADDRESS) {
+                    let required_amount = txs[ts_id][0]
 
-                let amount = required_amount.tokenAmount.uiAmount
-                notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)  
+                    let amount = required_amount.tokenAmount.uiAmount
+                    notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
                 }
 
-                
+
                 ts_id++
             }
 
@@ -290,9 +304,9 @@ function showMainMenu(chatId) {
 // Handle the /start command
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-  //  showMainMenu(chatId); // Show the main menu when the bot starts
+    //  showMainMenu(chatId); // Show the main menu when the bot starts
 
-const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
+    const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
 
 
 
@@ -327,9 +341,9 @@ async function sendBuyNotification(chatId, amount, signature, sol) {
 
     // Construct the notification message
     let caption = `*${tokenName} Buy Notification!*\n${settings.customEmojis[settings.customEmojis. length-1].repeat(dollarAmount>20?20:dollarAmount.toFixed(0))}\n\n`;
-    if(sol){
+    if (sol) {
         caption += `💵 SOL Amount: $${(dollarAmount/Number(sol_price)).toFixed(3)} ($${dollarAmount.toFixed(2)})\n`;
-    }else{
+    } else {
         caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
     }
 
@@ -391,7 +405,7 @@ bot.on('callback_query', async(query) => {
             bot.once('text', async(msg) => {
                 const emoji = msg.text.trim();
                 settings.customEmojis.push(emoji); // Add the emoji to the list
-           //     console.log(settings.customEmojis)
+                //     console.log(settings.customEmojis)
                 await saveSettings();
                 bot.sendMessage(chatId, `Custom buy emoji set to: ${emoji}`);
             });
@@ -535,18 +549,18 @@ async function init() {
 // Start the bot
 init();
 //test
-let testing = async()=>{
-//   let transactionList = await connection.getSignaturesForAddress(tokenAddress, { limit: 10});
+let testing = async() => {
+    //   let transactionList = await connection.getSignaturesForAddress(tokenAddress, { limit: 10});
 
     //Add this code
     //let signatureList = transactionList.map(transaction => transaction.signature);
-   // console.log(signatureList)
-    let transactionDetails = await connection.getParsedTransactions(["pSfvhV2vtDsLWJp9Dx1YZgNLTusjDxKKJcuZZ1Z9PAPr3ico9Wdm5AC5Ez7DV4iCjk6rHWfYhfm8MzTJ7Jvo3p2"], { maxSupportedTransactionVersion: 0 });
-    console.log(JSON.stringify(transactionDetails))
+    // console.log(signatureList)
+    let transactionDetails = await connection.getParsedTransactions(['5uVd3VAu6KxmSekgBzi7pV7pSm8FDKcVameXUp4zFhtnStPCprBFTjYcJqik8yVc7DT1tncnjFnVEEnD8bEnBXBJ'], { maxSupportedTransactionVersion: 0 });
+    console.log(JSON.stringify(transactionDetails[0].meta.innerInstructions, null, 2))
 }
 
-//testing()
-           
+// testing()
+
 
 // Handle webhook requests from Vercel
 const app = express();
