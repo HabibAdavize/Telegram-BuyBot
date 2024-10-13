@@ -342,7 +342,7 @@ async function sendBuyNotification(chatId, amount, signature, sol) {
     // Construct the notification message
     let caption = `*${tokenName} Buy Notification!*\n${settings.customEmojis[settings.customEmojis. length-1].repeat(dollarAmount>20?20:dollarAmount.toFixed(0))}\n\n`;
     if (sol) {
-        caption += `💵 SOL Amount: $${(dollarAmount/Number(sol_price)).toFixed(3)} ($${dollarAmount.toFixed(2)})\n`;
+        caption += `💵 SOL Amount: ${(dollarAmount/Number(sol_price)).toFixed(3)}SOL ($${dollarAmount.toFixed(2)})\n`;
     } else {
         caption += `💵 Dollar Amount: $${dollarAmount.toFixed(2)}\n`;
     }
