@@ -1,6 +1,6 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs').promises;
+const fs = require('fs');
 const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
@@ -167,7 +167,7 @@ async function trackRealTimeTokenTransactions(tokenAccountAddress) {
 }
 
 function filterTransactionsWithAmount(data, signature) {
-    console.log(signature)
+    // console.log(signature)
     const results = [];
 
     // Loop through each innerInstruction
@@ -555,8 +555,8 @@ let testing = async() => {
     //Add this code
     //let signatureList = transactionList.map(transaction => transaction.signature);
     // console.log(signatureList)
-    let transactionDetails = await connection.getParsedTransactions(['5uVd3VAu6KxmSekgBzi7pV7pSm8FDKcVameXUp4zFhtnStPCprBFTjYcJqik8yVc7DT1tncnjFnVEEnD8bEnBXBJ'], { maxSupportedTransactionVersion: 0 });
-    console.log(JSON.stringify(transactionDetails[0].meta.innerInstructions, null, 2))
+    let transactionDetails = await connection.getParsedTransactions(['2KTBTz6CfSUyfTFu6onTJu6fXVYVEk76NBMWg5ABQxkanSHjkP7rbNbSSP8QBnZjLcpPqBvvchWZCaEifadeesEp'], { maxSupportedTransactionVersion: 0 });
+    fs.writeFileSync('./ex3.json', JSON.stringify(transactionDetails[0], null, 2))
 }
 
 // testing()
