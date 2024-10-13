@@ -1,6 +1,6 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs');
+const fs = require('fs').promises;
 const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
 const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
