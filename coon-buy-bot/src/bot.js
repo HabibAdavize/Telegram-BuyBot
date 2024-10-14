@@ -39,7 +39,7 @@ const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection("https://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e", { wsEndpoint: "wss://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e" }); // Initialize Solana connection
+const connection = new Connection(process.env.SOLANA_RPC_URL_H, { wsEndpoint: process.env.SOLANA_RPC_URL }); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
@@ -197,7 +197,7 @@ const getTransactions = async(address, numTx = 15) => {
 
     //Add this code
     let signatureList = transactionList.map(transaction => transaction.signature);
-    // console.log(signatureList)
+    console.log(signatureList)
     let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
     let txs_list = []
         //--END of new code 
