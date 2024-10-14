@@ -1,4 +1,4 @@
-prequire('dotenv').config();
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs').promises;
 const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
