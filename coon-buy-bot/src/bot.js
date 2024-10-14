@@ -212,7 +212,7 @@ const getTransactions = async(address, numTx = 15) => {
         let txs = null
             // console.log(instruction, transactionDetails[i].transaction.signatures[0])
         if (transactionDetails[i].meta.innerInstructions.length <= 1) {
-            console.log(instruction)
+            console.log(JSON.stringify(transactionDetails[i].meta.innerInstructions, null, 2))
             txs = instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
                 mint: d.parsed.info.mint,
                 tokenAmount: d.parsed.info.tokenAmount,
