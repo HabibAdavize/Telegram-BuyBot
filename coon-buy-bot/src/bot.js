@@ -1,4 +1,4 @@
-require('dotenv').config();
+prequire('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs').promises;
 const { Connection, PublicKey, clusterApiUrl } = require('@solana/web3.js');
@@ -212,6 +212,7 @@ const getTransactions = async(address, numTx = 15) => {
         let txs = null
             // console.log(instruction, transactionDetails[i].transaction.signatures[0])
         if (transactionDetails[i].meta.innerInstructions.length <= 1) {
+            console.log(instruction)
             txs = instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
                 mint: d.parsed.info.mint,
                 tokenAmount: d.parsed.info.tokenAmount,
