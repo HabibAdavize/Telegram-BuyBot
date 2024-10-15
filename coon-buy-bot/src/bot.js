@@ -104,7 +104,7 @@ async function fetchTokenDetails() {
         const response = await axios.get('https://api.dexscreener.com/latest/dex/tokens/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk'); // Example API endpoint
         const pairData = response.data.pairs[0]; // Get the first pair
         const sol_data = await axios.get("https://price.jup.ag/v6/price?ids=SOL")
-            console.log(sol_data)    
+            console.log(sol_data.data.data.SOL)    
         const sol_price = sol_data.data.data.SOL.price
             // Extract relevant details
         const tokenPrice = parseFloat(pairData.priceUsd); // Token price in USD
