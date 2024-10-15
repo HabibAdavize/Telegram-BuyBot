@@ -197,7 +197,7 @@ const getTransactions = async(address, numTx = 15) => {
 
     //Add this code
     let signatureList = transactionList.map(transaction => transaction.signature);
-    console.log(signatureList)
+    //console.log(signatureList)
     let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
     let txs_list = []
         //--END of new code 
@@ -283,7 +283,7 @@ let startPolling = () => {
             }
 
         },
-        20000)
+        10000)
 }
 
 
