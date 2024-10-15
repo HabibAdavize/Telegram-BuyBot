@@ -6,8 +6,10 @@ const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
 const WebSocket = require('ws');
 const { json } = require('body-parser');
+const redis = require('./redis');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+
 
 
 
@@ -212,7 +214,7 @@ const getTransactions = async(address, numTx = 15) => {
         let txs = null
             // console.log(instruction, transactionDetails[i].transaction.signatures[0])
         if (transactionDetails[i].meta.innerInstructions.length === 1) {
-           // console.log(JSON.stringify(transactionDetails[i].meta.innerInstructions, null, 2) , yeyo)
+            // console.log(JSON.stringify(transactionDetails[i].meta.innerInstructions, null, 2) , yeyo)
             txs = instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
                 mint: d.parsed.info.mint,
                 tokenAmount: d.parsed.info.tokenAmount,
@@ -250,37 +252,47 @@ let InitSignature = null
 let startPolling = () => {
     setInterval(async() => {
 
-            let txs = await getTransactions(tokenAddress) || []
-                // console.log(InitSignature)
+            try {
+                InitSignature = await redis.get("InitSignature")
+                let txs = await getTransactions(tokenAddress) || []
+                    // console.log(InitSignature)
 
-            // InitSignature === null && txs.shift()
+                // InitSignature === null && txs.shift()
 
-            if (InitSignature === null) {
+                if (InitSignature === null) {
 
-                InitSignature = txs.shift()[0].signature[0]
+                    InitSignature = txs.shift()[0].signature[0]
+                    await redis.set("InitSignature", txs.shift()[0].signature[0])
 
-                return
-            }
-
-            let ts_id = 0
-            while (txs[ts_id][0].signature[0] !== InitSignature) {
-
-                if (txs[ts_id][1].mint === process.env.TOKEN_ADDRESS) {
-                    let required_amount = txs[ts_id][0]
-
-                    let amount = required_amount.tokenAmount.uiAmount
-                    notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
+                    return
                 }
 
+                let ts_id = 0
+                while (txs[ts_id][0].signature[0] !== InitSignature) {
 
-                ts_id++
+                    if (txs[ts_id][1].mint === process.env.TOKEN_ADDRESS) {
+                        let required_amount = txs[ts_id][0]
+
+                        let amount = required_amount.tokenAmount.uiAmount
+                        notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
+                    }
+
+
+                    ts_id++
+                }
+
+                //if the signature of the topmost tx is differnt 
+
+                if (txs[0][0].signature[0] !== InitSignature) {
+                    InitSignature = txs[0][0].signature[0]
+                    await redis.set("InitSignature", txs[0][0].signature[0])
+                }
+
+            } catch (err) {
+                console.log('error fetching transactions')
             }
 
-            //if the signature of the topmost tx is differnt 
 
-            if (txs[0][0].signature[0] !== InitSignature) {
-                InitSignature = txs[0][0].signature[0]
-            }
 
         },
         10000)
@@ -292,7 +304,12 @@ let startPolling = () => {
 // Notify all groups about the buy
 async function notifyGroups(amount, signature, sol) {
     for (const chatId of settings.groupChatIds) {
-        await sendBuyNotification(chatId, amount, signature, sol);
+        try {
+            await sendBuyNotification(chatId, amount, signature, sol);
+        } catch (err) {
+            console.log("Error notifying groups")
+        }
+
     }
 }
 
@@ -308,7 +325,7 @@ bot.onText(/\/start/, (msg) => {
     //  showMainMenu(chatId); // Show the main menu when the bot starts
 
     const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
-
+    bot.sendMessage(chatId, menuCaption);
 
 
 
