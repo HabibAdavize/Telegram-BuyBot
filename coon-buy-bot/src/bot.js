@@ -281,7 +281,12 @@ let startPolling = () => {
 
                         let amount = required_amount.tokenAmount.uiAmount
                             // console.log(txs[ts_id][0].signature[0], InitSignature)
-                        notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
+                        try {
+                            notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
+                        } catch (err) {
+                            console.log('error occured')
+                        }
+
                     }
 
 
@@ -609,28 +614,30 @@ app.listen(PORT, () => {
 
 // Inline keyboard for main menu
 const mainMenuKeyboard = {
-    reply_markup: {
-        inline_keyboard: [
-            [
-                { text: '🟢 Activate', callback_data: 'activate' },
-                { text: '🔴 Deactivate', callback_data: 'deactivate' }
-            ],
-            [{ text: '🖼 Set Buy Image', callback_data: 'set_image' }],
-            [
-                { text: '🟢 Buy Emoji', callback_data: 'set_buy_emoji' },
-                { text: '🔀 Shuffle', callback_data: 'toggle_shuffle' }
-            ],
-            [
-                { text: '💲 Buy Step', callback_data: 'set_buy_step' },
-                { text: '🏔 Min. Buy', callback_data: 'set_min_buy' }
-            ],
-            [{ text: '🔄 Supply', callback_data: 'set_supply' }],
-            [
-                { text: '💰 Token Price', callback_data: 'set_token_price' },
-                { text: '📊 Market Cap', callback_data: 'set_market_cap' }
-            ],
-            [{ text: '🎨 Emoji Layout Style', callback_data: 'set_layout_style' }],
-            [{ text: '📈 Set Chart URL', callback_data: 'set_chart_url' }]
-        ]
-    }
+reply_markup: {
+    inline_keyboard: [
+        [
+            { text: '🟢 Activate', callback_data: 'activate' },
+            { text: '🔴 Deactivate', callback_data: 'deactivate' }
+        ],
+        [{ text: '🖼 Set Buy Image', callback_data: 'set_image' }],
+        [
+            { text: '🟢 Buy Emoji', callback_data: 'set_buy_emoji' },
+            { text: '🔀 Shuffle', callback_data: 'toggle_shuffle' }
+        ],
+        [
+            { text: '💲 Buy Step', callback_data: 'set_buy_step' },
+            { text: '🏔 Min. Buy', callback_data: 'set_min_buy' }
+        ],
+        [{ text: '🔄 Supply', callback_data: 'set_supply' }],
+        [
+            { text: '💰 Token Price', callback_data: 'set_token_price' },
+            { text: '📊 Market Cap', callback_data: 'set_market_cap' }
+        ],
+        [{ text: '🎨 Emoji Layout Style', callback_data: 'set_layout_style' }],
+        [{ text: '📈 Set Chart URL', callback_data: 'set_chart_url' }]
+    ]
+}
+};]
+}
 };
