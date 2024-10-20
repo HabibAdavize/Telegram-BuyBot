@@ -103,10 +103,10 @@ async function fetchTokenDetails() {
     try {
         const response = await axios.get('https://api.dexscreener.com/latest/dex/tokens/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk'); // Example API endpoint
         const pairData = response.data.pairs[0]; // Get the first pair
-     //   const sol_data = await axios.get("https://price.jup.ag/v6/price?ids=SOL")
-         //   console.log(sol_data.data.data.SOL)    
-     //   const sol_price = sol_data.data.data.SOL.price
-            // Extract relevant details
+        //   const sol_data = await axios.get("https://price.jup.ag/v6/price?ids=SOL")
+        //   console.log(sol_data.data.data.SOL)    
+        //   const sol_price = sol_data.data.data.SOL.price
+        // Extract relevant details
         const tokenPrice = parseFloat(pairData.priceUsd); // Token price in USD
         const marketCap = pairData.marketCap; // Market cap
         const volume24h = pairData.volume.h24; // 24h volume
@@ -199,7 +199,7 @@ const getTransactions = async(address, numTx = 15) => {
 
     //Add this code
     let signatureList = transactionList.map(transaction => transaction.signature);
-    //console.log(signatureList)
+    // console.log(signatureList)
     let transactionDetails = await connection.getParsedTransactions(signatureList, { maxSupportedTransactionVersion: 0 });
     let txs_list = []
         //--END of new code 
@@ -253,27 +253,34 @@ let startPolling = () => {
     setInterval(async() => {
 
             try {
-               // InitSignature = await redis.get("InitSignature")
+                InitSignature = await redis.get("InitSignature")
                 let txs = await getTransactions(tokenAddress) || []
-                    // console.log(InitSignature)
+                console.log(InitSignature)
 
                 // InitSignature === null && txs.shift()
 
                 if (InitSignature === null) {
 
                     InitSignature = txs.shift()[0].signature[0]
-                    //await redis.set("InitSignature", txs.shift()[0].signature[0])
+                    await redis.set("InitSignature", txs.shift()[0].signature[0])
 
                     return
                 }
 
                 let ts_id = 0
                 while (txs[ts_id][0].signature[0] !== InitSignature) {
+                    if (txs[ts_id].length <= 1) {
+                        ts_id++
+                        return
+
+                    }
+
 
                     if (txs[ts_id][1].mint === process.env.TOKEN_ADDRESS) {
                         let required_amount = txs[ts_id][0]
 
                         let amount = required_amount.tokenAmount.uiAmount
+                            // console.log(txs[ts_id][0].signature[0], InitSignature)
                         notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
                     }
 
@@ -284,11 +291,13 @@ let startPolling = () => {
                 //if the signature of the topmost tx is differnt 
 
                 if (txs[0][0].signature[0] !== InitSignature) {
+                    console.log(txs[0][0].signature[0], ' yelp')
                     InitSignature = txs[0][0].signature[0]
-                  //  await redis.set("InitSignature", txs[0][0].signature[0])
+                    await redis.set("InitSignature", txs[0][0].signature[0])
                 }
 
             } catch (err) {
+                console.log(err)
                 console.log('error fetching transactions')
             }
 
@@ -573,11 +582,11 @@ let testing = async() => {
     //Add this code
     //let signatureList = transactionList.map(transaction => transaction.signature);
     // console.log(signatureList)
-    let transactionDetails = await connection.getParsedTransactions(['2KTBTz6CfSUyfTFu6onTJu6fXVYVEk76NBMWg5ABQxkanSHjkP7rbNbSSP8QBnZjLcpPqBvvchWZCaEifadeesEp'], { maxSupportedTransactionVersion: 0 });
+    let transactionDetails = await connection.getParsedTransactions(['2dnBCEVTnVD817ZK3QmJoBaTLAjGoXsrcYXDjfNLQUfcKKh2xuytmL9wCHKjBxEhMyoATHfwKBt79TZkeht39qVt'], { maxSupportedTransactionVersion: 0 });
     fs.writeFileSync('./ex3.json', JSON.stringify(transactionDetails[0], null, 2))
 }
 
-// testing()
+// testing()  
 
 
 // Handle webhook requests from Vercel

@@ -29,4 +29,14 @@ redis.on('close', () => {
 });
 
 
+
+
+// async function test(params) {
+//     await redis.set("InitSignature", "pasnbnm")
+//     let y = await redis.get("InitSignature")
+//     console.log(y)
+// }
+
+// test()
+
 module.exports = redis
