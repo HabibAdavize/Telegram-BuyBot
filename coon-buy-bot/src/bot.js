@@ -270,11 +270,6 @@ let startPolling = () => {
 
                 //if the signature of the topmost tx is differnt 
 
-                if (txs[0][0].signature[0] !== InitSignature) {
-                    console.log(txs[0][0].signature[0], ' yelp')
-                    InitSignature = txs[0][0].signature[0]
-                    await redis.set("InitSignature", txs[0][0].signature[0])
-                }
 
                 let ts_id = 0
                 while (txs[ts_id][0].signature[0] !== InitSignature) {
@@ -297,6 +292,12 @@ let startPolling = () => {
                         }
 
                     }
+                    
+                if (txs[0][0].signature[0] !== InitSignature) {
+                    console.log(txs[0][0].signature[0], ' yelp')
+                    InitSignature = txs[0][0].signature[0]
+                    await redis.set("InitSignature", txs[0][0].signature[0])
+                }
 
 
                     ts_id++
