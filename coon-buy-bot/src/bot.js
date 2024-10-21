@@ -253,7 +253,7 @@ let startPolling = () => {
     setInterval(async() => {
 
             try {
-                InitSignature = await redis.get("InitSignature")
+              //  InitSignature = await redis.get("InitSignature")
                 let txs = await getTransactions(tokenAddress) || []
               //  console.log(InitSignature)
 
@@ -262,7 +262,7 @@ let startPolling = () => {
                 if (InitSignature === null) {
 
                     InitSignature = txs.shift()[0].signature[0]
-                    await redis.set("InitSignature", txs.shift()[0].signature[0])
+                 //   await redis.set("InitSignature", txs.shift()[0].signature[0])
 
                     return
                 }
@@ -296,7 +296,7 @@ let startPolling = () => {
                 if (txs[0][0].signature[0] !== InitSignature) {
                     console.log(txs[0][0].signature[0], ' yelp')
                     InitSignature = txs[0][0].signature[0]
-                    await redis.set("InitSignature", txs[0][0].signature[0])
+                   // await redis.set("InitSignature", txs[0][0].signature[0])
                 }
 
 
