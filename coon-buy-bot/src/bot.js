@@ -255,7 +255,7 @@ let startPolling = () => {
             try {
                 InitSignature = await redis.get("InitSignature")
                 let txs = await getTransactions(tokenAddress) || []
-                console.log(InitSignature)
+              //  console.log(InitSignature)
 
                 // InitSignature === null && txs.shift()
 
@@ -289,7 +289,7 @@ let startPolling = () => {
                         let required_amount = txs[ts_id][0]
 
                         let amount = required_amount.tokenAmount.uiAmount
-                            // console.log(txs[ts_id][0].signature[0], InitSignature)
+                        console.log("spiout")                            // console.log(txs[ts_id][0].signature[0], InitSignature)
                         try {
                             notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
                         } catch (err) {
