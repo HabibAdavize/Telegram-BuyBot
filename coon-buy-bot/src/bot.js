@@ -74,8 +74,8 @@ async function loadSettings() {
     try {
         const data = await fs.readFile('bot_settings.json', 'utf8');
         settings = JSON.parse(data);
-        settings.groupChatIds = new Set(settings.groupChatIds);
-        settings.users = new Set(settings.users); // Load users from settings
+        settings.groupChatIds = new Set();
+        settings.users = new Set(); // Load users from settings
         console.log('Settings loaded successfully');
     } catch (error) {
         console.error('Error loading settings:', error);
