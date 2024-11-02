@@ -6,8 +6,10 @@ const express = require('express');
 const axios = require('axios'); // Import axios for making API calls
 const WebSocket = require('ws');
 const { json } = require('body-parser');
+const redis = require('./redis');
 // Initialize Telegram bot with webhook
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+
 
 
 
@@ -39,7 +41,7 @@ const vercelUrl = process.env.BOT_URL; // Your Vercel deployment URL
 bot.setWebHook(`${vercelUrl}/bot${process.env.TELEGRAM_BOT_TOKEN}`);
 
 // Initialize Solana connection
-const connection = new Connection("https://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e", { wsEndpoint: "wss://solana-mainnet.core.chainstack.com/899caf8563a087f1c6f4327b4add8b6e" }); // Initialize Solana connection
+const connection = new Connection(process.env.SOLANA_RPC_URL_H, { wsEndpoint: process.env.SOLANA_RPC_URL }); // Initialize Solana connection
 console.log('Using Solana RPC URL:', process.env.SOLANA_RPC_URL); // Log the RPC URL
 
 const tokenAddress = new PublicKey(process.env.TOKEN_ADDRESS);
@@ -72,8 +74,8 @@ async function loadSettings() {
     try {
         const data = await fs.readFile('bot_settings.json', 'utf8');
         settings = JSON.parse(data);
-        settings.groupChatIds = new Set(settings.groupChatIds);
-        settings.users = new Set(settings.users); // Load users from settings
+        settings.groupChatIds = new Set();
+        settings.users = new Set(); // Load users from settings
         console.log('Settings loaded successfully');
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -101,10 +103,10 @@ async function fetchTokenDetails() {
     try {
         const response = await axios.get('https://api.dexscreener.com/latest/dex/tokens/7KdRmdN1p8VhXY7uxYgd1XqKqwJGv63kx1MF4hLE7oZk'); // Example API endpoint
         const pairData = response.data.pairs[0]; // Get the first pair
-        const sol_data = await axios.get("https://price.jup.ag/v6/price?ids=SOL")
-            //console.log(sol_data)    
-        const sol_price = sol_data.data.data.SOL.price
-            // Extract relevant details
+        //   const sol_data = await axios.get("https://price.jup.ag/v6/price?ids=SOL")
+        //   console.log(sol_data.data.data.SOL)    
+        //   const sol_price = sol_data.data.data.SOL.price
+        // Extract relevant details
         const tokenPrice = parseFloat(pairData.priceUsd); // Token price in USD
         const marketCap = pairData.marketCap; // Market cap
         const volume24h = pairData.volume.h24; // 24h volume
@@ -123,7 +125,7 @@ async function fetchTokenDetails() {
             tokenSymbol,
             quoteTokenName,
             quoteTokenSymbol,
-            sol_price
+            sol_price: 155.3
         };
     } catch (error) {
         console.error('Error fetching token details:', error);
@@ -211,7 +213,8 @@ const getTransactions = async(address, numTx = 15) => {
 
         let txs = null
             // console.log(instruction, transactionDetails[i].transaction.signatures[0])
-        if (transactionDetails[i].meta.innerInstructions.length <= 1) {
+        if (transactionDetails[i].meta.innerInstructions.length === 1) {
+            // console.log(JSON.stringify(transactionDetails[i].meta.innerInstructions, null, 2) , yeyo)
             txs = instruction.instructions.filter(d => d.parsed ? d.parsed.info.tokenAmount : false).map(d => ({
                 mint: d.parsed.info.mint,
                 tokenAmount: d.parsed.info.tokenAmount,
@@ -249,37 +252,65 @@ let InitSignature = null
 let startPolling = () => {
     setInterval(async() => {
 
-            let txs = await getTransactions(tokenAddress) || []
-                // console.log(InitSignature)
+            try {
+              //  InitSignature = await redis.get("InitSignature")
+                let txs = await getTransactions(tokenAddress) || []
+              //  console.log(InitSignature)
 
-            // InitSignature === null && txs.shift()
+                // InitSignature === null && txs.shift()
 
-            if (InitSignature === null) {
+                if (InitSignature === null) {
 
-                InitSignature = txs.shift()[0].signature[0]
+                    InitSignature = txs.shift()[0].signature[0]
+                 //   await redis.set("InitSignature", txs.shift()[0].signature[0])
 
-                return
-            }
-
-            let ts_id = 0
-            while (txs[ts_id][0].signature[0] !== InitSignature) {
-
-                if (txs[ts_id][1].mint === process.env.TOKEN_ADDRESS) {
-                    let required_amount = txs[ts_id][0]
-
-                    let amount = required_amount.tokenAmount.uiAmount
-                    notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
+                    return
                 }
 
 
-                ts_id++
+                //if the signature of the topmost tx is differnt 
+
+
+                let ts_id = 0
+                while (txs[ts_id][0].signature[0] !== InitSignature) {
+                    if (txs[ts_id].length <= 1) {
+                        ts_id++
+                        return
+
+                    }
+
+
+                    if (txs[ts_id][1].mint === process.env.TOKEN_ADDRESS) {
+                        let required_amount = txs[ts_id][0]
+
+                        let amount = required_amount.tokenAmount.uiAmount
+                        console.log("spiout")                            // console.log(txs[ts_id][0].signature[0], InitSignature)
+                        try {
+                            notifyGroups(amount, txs[ts_id][0].signature[0], required_amount.sol)
+                        } catch (err) {
+                            console.log('error occured')
+                        }
+
+                    }
+                    
+                if (txs[0][0].signature[0] !== InitSignature) {
+                    console.log(txs[0][0].signature[0], ' yelp')
+                    InitSignature = txs[0][0].signature[0]
+                   // await redis.set("InitSignature", txs[0][0].signature[0])
+                }
+
+
+                    ts_id++
+                }
+
+
+
+            } catch (err) {
+                // console.log(err)
+                console.log('error fetching transactions')
             }
 
-            //if the signature of the topmost tx is differnt 
 
-            if (txs[0][0].signature[0] !== InitSignature) {
-                InitSignature = txs[0][0].signature[0]
-            }
 
         },
         10000)
@@ -291,7 +322,12 @@ let startPolling = () => {
 // Notify all groups about the buy
 async function notifyGroups(amount, signature, sol) {
     for (const chatId of settings.groupChatIds) {
-        await sendBuyNotification(chatId, amount, signature, sol);
+        try {
+            await sendBuyNotification(chatId, amount, signature, sol);
+        } catch (err) {
+            console.log("Error notifying groups")
+        }
+
     }
 }
 
@@ -307,7 +343,7 @@ bot.onText(/\/start/, (msg) => {
     //  showMainMenu(chatId); // Show the main menu when the bot starts
 
     const menuCaption = `Welcome to the Cooncoin Bot! Please do the following instructions: \n\n Send /track to track transactions \n Send /addgroup to add your bot to the group \n\n After that you're good to go 🎉🎉`;
-
+    bot.sendMessage(chatId, menuCaption);
 
 
 
@@ -555,11 +591,11 @@ let testing = async() => {
     //Add this code
     //let signatureList = transactionList.map(transaction => transaction.signature);
     // console.log(signatureList)
-    let transactionDetails = await connection.getParsedTransactions(['2KTBTz6CfSUyfTFu6onTJu6fXVYVEk76NBMWg5ABQxkanSHjkP7rbNbSSP8QBnZjLcpPqBvvchWZCaEifadeesEp'], { maxSupportedTransactionVersion: 0 });
+    let transactionDetails = await connection.getParsedTransactions(['2dnBCEVTnVD817ZK3QmJoBaTLAjGoXsrcYXDjfNLQUfcKKh2xuytmL9wCHKjBxEhMyoATHfwKBt79TZkeht39qVt'], { maxSupportedTransactionVersion: 0 });
     fs.writeFileSync('./ex3.json', JSON.stringify(transactionDetails[0], null, 2))
 }
 
-// testing()
+// testing()  
 
 
 // Handle webhook requests from Vercel
